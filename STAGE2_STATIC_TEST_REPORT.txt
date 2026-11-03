@@ -1,0 +1,94 @@
+Batting Shop V4 Stage 2 — verificación estática/build
+==========================================================
+PASS Solo migraciones 001 y 002 
+PASS Etapa 3 alias no implementada 
+PASS CSV attr: aún no implementado 
+PASS Plantilla CSV legacy conservada 
+PASS Swatch 15x15 + flex none 
+PASS Tallas usan sizeSortOrder 
+PASS Código BS no se muestra en frontend público 
+PASS Plantilla compartida en páginas 
+PASS Catálogo por RPC 
+PASS Ficha por RPC individual 
+PASS Relacionados por RPC 
+PASS Cliente público sin persistir sesión 
+PASS Carrito revalida por lote 
+PASS Storage local protegido 
+PASS Imagen carrito restringida 
+PASS Supabase self-hosted por build 
+PASS Supabase fijado 2.117.2 
+PASS Producción distingue CF_PAGES_BRANCH 
+PASS robots no revela /admin/ 
+PASS CSP sin unsafe-inline 
+PASS HTML sin style inline 
+PASS Admin sin alert/confirm nativos 
+PASS Admin usa toasts/diálogo 
+PASS Admin categoría dinámica 
+PASS Cambiar slug avisa que rompe URL hasta Etapa 3 
+PASS Verde AA 
+PASS Rojo sobre navy AA 
+PASS Rojo botón/blanco AA 
+PASS Táctiles >=44px presentes 
+PASS Filtro renombrado Edad / nivel 
+PASS Barra móvil 5 items 
+PASS Favoritos implementados 
+PASS Categorías móviles desde BD 
+PASS aria-current móvil 
+PASS WhatsApp flotante 56px 
+PASS WhatsApp usa config 
+PASS WhatsApp contextual ficha 
+PASS Softball SVG <3KB 
+PASS Softball amarilla 
+PASS Loader 350ms / 400ms / 12s 
+PASS withLoader expuesto 
+PASS Reduced motion loader 
+PASS Pelotas sembrada inactiva 
+PASS Pelotas atributos 
+PASS Presentación scope variant 
+PASS display_name color agregado 
+PASS Validación categoría/atributos 
+PASS Máximo 6 destacados 
+PASS RPC catálogo Stage2 
+PASS RPC producto Stage2 sin alias 
+PASS RPC carrito por lote 
+PASS Public RPC no expone code/cost/stock/SKU 
+PASS Categorías dinámicas frontend 
+PASS Filtros dinámicos catálogo 
+PASS Búsqueda atributos/keywords 
+PASS URL limpia de producto 
+PASS Worker OG dinámico 
+PASS Worker fallback HTML si Supabase falla 
+PASS URL legacy ?slug redirige a limpia 
+PASS Estado Próximamente 
+PASS Sin alias de slugs todavía 
+PASS Sin CSV attr dinámico todavía 
+PASS JS syntax public/admin/assets/admin.js 
+PASS JS syntax public/assets/js/bootstrap.js 
+PASS JS syntax public/assets/js/cart.js 
+PASS JS syntax public/assets/js/catalog-store.js 
+PASS JS syntax public/assets/js/catalog.js 
+PASS JS syntax public/assets/js/config.js 
+PASS JS syntax public/assets/js/favorites-page.js 
+PASS JS syntax public/assets/js/favorites.js 
+PASS JS syntax public/assets/js/index.js 
+PASS JS syntax public/assets/js/product.js 
+PASS JS syntax public/assets/js/site-config.js 
+PASS JS syntax public/assets/js/sizeguide.js 
+PASS JS syntax public/assets/js/storage.js 
+PASS JS syntax public/assets/js/ui.js 
+PASS JS syntax build.mjs 
+PASS Preview build sin SITE_URL 
+PASS dist sin privados 
+PASS Vendor local en dist 
+PASS Cloudflare worker generado 
+PASS Footer/manifest en páginas 
+PASS Preview noindex 
+PASS Build no style inline 
+PASS Producción bloquea SITE_URL faltante 
+PASS Producción con SITE_URL construye 
+PASS robots producción no revela admin 
+PASS sitemap dominio final 
+PASS sitemap base contiene favoritos 
+PASS Build rechaza SUPABASE_URL externo 
+
+90/90 checks passed

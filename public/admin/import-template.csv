@@ -1,0 +1,2 @@
+code,slug,name,brand,category,price,color,color_label,color_hex,size_label,normalized_size,size_sort_order,sale_price,stock,cost,provider_sku,provider_source_url,attr:edad_nivel,attr:tipo,attr:tamano,attr:material,attr:presentacion
+BS-100,ejemplo-guantin,Producto de ejemplo,Franklin,guantines,,Black,Negro,#111111,MD,M,30,,0,,,,Adulto,,,,

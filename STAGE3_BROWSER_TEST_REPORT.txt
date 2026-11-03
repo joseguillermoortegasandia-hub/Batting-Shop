@@ -1,0 +1,31 @@
+Batting Shop V4 Stage 3 — browser smoke
+====================================================
+PASS Loader aparece con latencia 1.5s 
+PASS Loader se oculta al terminar 
+PASS Categoría dinámica aparece home 
+PASS Sin scroll horizontal móvil 
+PASS Barra inferior visible 
+PASS Barra inferior tiene 5 items 
+PASS WhatsApp sobre barra 
+PASS Hoja categorías usa BD 
+PASS Escape cierra categorías 
+PASS Búsqueda por atributo 
+PASS Filtro Material dinámico 
+PASS Filtro Presentación dinámico 
+PASS Catálogo sin scroll horizontal 
+PASS Ficha individual carga 
+PASS Atributo variante renderiza 
+PASS WhatsApp no tapa CTA 
+PASS Carrito mixto total Por confirmar 
+PASS WhatsApp sin $0.00 
+PASS Badge 0 oculto 
+PASS Sin errores JS móvil 
+PASS Reduced motion evita rodar 
+PASS Desktop sin scroll horizontal 
+PASS Barra móvil oculta desktop 
+PASS Carrito header visible desktop 
+PASS Footer común 
+PASS Sin errores JS desktop 
+PASS Home sin publicados muestra Próximamente 
+
+27/27 checks passed

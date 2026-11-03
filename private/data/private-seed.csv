@@ -1,0 +1,30 @@
+code,color,size_label,normalized_size,stock,cost,provider_sku,provider
+BS-001,Black,S,S,0,34.99,267688926,DICKS
+BS-001,Black,M,M,0,44.99,19616912,DICKS
+BS-001,Black,L,L,0,44.99,19616913,DICKS
+BS-001,Maroon,M,M,0,44.99,26516243,DICKS
+BS-001,Maroon,L,L,0,44.99,26516244,DICKS
+BS-001,Grey,M,M,0,44.99,26516210,DICKS
+BS-001,Grey,L,L,0,44.99,26516212,DICKS
+BS-001,Carolina Blue,L,L,0,44.99,26497701,DICKS
+BS-002,Yellow/Red/Blue,S/M,S/M,0,24.0,27339716,DICKS
+BS-002,White/Black,M/L,M/L,0,24.0,27339727,DICKS
+BS-003,Royal/Black,MD,M,0,22.99,24506283,DICKS
+BS-003,White,MD,M,0,22.99,24506290,DICKS
+BS-004,Black,L,L,0,17.06,,Amazon
+BS-004,USA,L,L,0,25.88,,Amazon
+BS-005,Grey,L,L,0,17.99,16477434,DICKS
+BS-006,Black/Digi Camo,M,M,0,17.99,,Amazon
+BS-007,Red/White/Blue,L,L,0,17.99,,Amazon
+BS-008,Carolina Blue/Navy,L,L,0,39.99,,Amazon
+BS-009,Navy/Gold,M,M,0,59.99,,Amazon
+BG-001,Blue/Green,Talla única,ONE,0,1.85,,Alibaba
+BG-002,Orange,Talla única,ONE,0,1.85,,Alibaba
+BG-003,Black/White,Talla única,ONE,0,1.85,,Alibaba
+BG-004,White/Red/Blue,Talla única,ONE,0,1.85,,Alibaba
+BG-005,Neon/Lime,Talla única,ONE,0,1.85,,Alibaba
+BG-006,Red/White,Talla única,ONE,0,1.85,,Alibaba
+BG-007,USA,Talla única,ONE,0,1.85,,Alibaba
+BG-008,Green Camo,Talla única,ONE,0,1.85,,Alibaba
+AC-001,Black,Talla única,ONE,0,5.99,,Amazon
+AC-002,Black,Talla única,ONE,0,6.99,,Amazon

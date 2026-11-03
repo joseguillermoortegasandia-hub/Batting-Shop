@@ -1,0 +1,17 @@
+{
+  "name": "batting-shop-catalog",
+  "private": true,
+  "version": "4.0.0-stage3",
+  "scripts": {
+    "build": "node build.mjs",
+    "verify": "python3 private/tests/verify.py",
+    "test:browser": "python3 private/tests/browser_smoke.py"
+  },
+  "description": "Batting Shop V4 Stage 3 — alias de slugs, CSV dinámico attr: y cierre acumulativo de las tres etapas.",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2"
+  }
+}

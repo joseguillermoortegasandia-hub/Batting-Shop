@@ -1,0 +1,292 @@
+{
+  "updated": "2026-10-05",
+  "brands": {
+    "Franklin": {
+      "note": "Franklin mide desde la base de la palma hasta la punta del dedo medio. Las tallas juveniles y adultas no son equivalentes.",
+      "source": "https://franklinsports.com/media/wysiwyg/Manuals/batting-glove-handchart-franklin-3.pdf",
+      "sections": [
+        {
+          "title": "Adulto",
+          "columns": [
+            "Talla",
+            "Longitud (pulg.)",
+            "Longitud (cm)"
+          ],
+          "rows": [
+            [
+              "S",
+              "6.75–7",
+              "17.1–17.8"
+            ],
+            [
+              "M",
+              "7–7.25",
+              "17.8–18.4"
+            ],
+            [
+              "L",
+              "7.25–7.75",
+              "18.4–19.7"
+            ],
+            [
+              "XL",
+              "7.75–8",
+              "19.7–20.3"
+            ],
+            [
+              "XXL",
+              "8–8.25",
+              "20.3–21.0"
+            ]
+          ]
+        },
+        {
+          "title": "Juvenil (Youth)",
+          "columns": [
+            "Talla",
+            "Longitud (pulg.)",
+            "Longitud (cm)"
+          ],
+          "rows": [
+            [
+              "XXS",
+              "5.25–5.5",
+              "13.3–14.0"
+            ],
+            [
+              "XS",
+              "5.5–5.75",
+              "14.0–14.6"
+            ],
+            [
+              "S",
+              "5.75–6",
+              "14.6–15.2"
+            ],
+            [
+              "M",
+              "6–6.25",
+              "15.2–15.9"
+            ],
+            [
+              "L",
+              "6.25–6.5",
+              "15.9–16.5"
+            ]
+          ]
+        }
+      ]
+    },
+    "Nike": {
+      "note": "Nike publica longitud y circunferencia por separado. Para Tee Ball usa tallas combinadas S/M y M/L.",
+      "source": "https://www.nike.com/size-fit/batting-gloves",
+      "sections": [
+        {
+          "title": "Béisbol – Adulto",
+          "columns": [
+            "Talla",
+            "Circunferencia (pulg.)",
+            "Longitud (pulg.)",
+            "Longitud aprox. (cm)"
+          ],
+          "rows": [
+            [
+              "S",
+              "7–7.5",
+              "7–7.25",
+              "17.8–18.4"
+            ],
+            [
+              "M",
+              "7.5–7.75",
+              "7.25–7.5",
+              "18.4–19.1"
+            ],
+            [
+              "L",
+              "7.75–8",
+              "7.5–7.75",
+              "19.1–19.7"
+            ],
+            [
+              "XL",
+              "8–8.25",
+              "7.75–8",
+              "19.7–20.3"
+            ],
+            [
+              "XXL",
+              "8.25–8.5",
+              "8–8.25",
+              "20.3–21.0"
+            ]
+          ]
+        },
+        {
+          "title": "Juvenil (Youth)",
+          "columns": [
+            "Talla",
+            "Circunferencia (pulg.)",
+            "Longitud (pulg.)",
+            "Longitud aprox. (cm)"
+          ],
+          "rows": [
+            [
+              "S",
+              "6.25–6.5",
+              "6.5–6.75",
+              "16.5–17.1"
+            ],
+            [
+              "M",
+              "6.5–6.75",
+              "6.75–7",
+              "17.1–17.8"
+            ],
+            [
+              "L",
+              "6.75–7",
+              "7–7.25",
+              "17.8–18.4"
+            ]
+          ]
+        },
+        {
+          "title": "Tee Ball",
+          "columns": [
+            "Talla",
+            "Circunferencia (pulg.)",
+            "Longitud (pulg.)",
+            "Longitud aprox. (cm)"
+          ],
+          "rows": [
+            [
+              "S/M",
+              "6.25–6.5",
+              "5.75–6",
+              "14.6–15.2"
+            ],
+            [
+              "M/L",
+              "6.5–6.75",
+              "6–6.25",
+              "15.2–15.9"
+            ]
+          ]
+        }
+      ]
+    },
+    "Under Armour": {
+      "note": "Under Armour usa SM/MD/LG para adulto y YSM/YMD/YLG para juvenil. En el catálogo la talla puede normalizarse para filtrar, pero siempre se muestra la nomenclatura oficial de la marca.",
+      "source": "https://www.underarmour.com/en-us/t/size-guide/mens-gloves/",
+      "sections": [
+        {
+          "title": "Adulto (Men's Gloves)",
+          "columns": [
+            "Talla UA",
+            "Equivalencia filtro",
+            "Circunferencia (pulg.)",
+            "Longitud (pulg.)",
+            "Longitud (cm)"
+          ],
+          "rows": [
+            [
+              "SM",
+              "S",
+              "7–7½",
+              "6⅞–7⅛",
+              "17.5–18.1"
+            ],
+            [
+              "MD",
+              "M",
+              "7⅝–8⅛",
+              "7¼–7½",
+              "18.4–19.1"
+            ],
+            [
+              "LG",
+              "L",
+              "8¼–8¾",
+              "7⅝–7⅞",
+              "19.4–20.0"
+            ],
+            [
+              "XL",
+              "XL",
+              "8⅞–9⅜",
+              "8–8¼",
+              "20.3–21.0"
+            ],
+            [
+              "XXL",
+              "XXL",
+              "9½–10",
+              "8⅜–8⅝",
+              "21.3–21.9"
+            ]
+          ],
+          "source": "https://www.underarmour.com/en-us/t/size-guide/mens-gloves/"
+        },
+        {
+          "title": "Juvenil (Youth Gloves)",
+          "columns": [
+            "Talla UA",
+            "Equivalencia filtro",
+            "Longitud (pulg.)",
+            "Longitud (cm)"
+          ],
+          "rows": [
+            [
+              "YSM",
+              "S",
+              "6¼–6½",
+              "15.9–16.5"
+            ],
+            [
+              "YMD",
+              "M",
+              "6½–6¾",
+              "16.5–17.1"
+            ],
+            [
+              "YLG",
+              "L",
+              "6¾–7",
+              "17.1–17.8"
+            ]
+          ],
+          "source": "https://www.underarmour.com/en-us/t/size-guide/girls-gloves/"
+        },
+        {
+          "title": "Pee Wee / T-Ball",
+          "columns": [
+            "Talla UA",
+            "Longitud (pulg.)",
+            "Longitud (cm)"
+          ],
+          "rows": [
+            [
+              "OSFM",
+              "5¾–6",
+              "14.6–15.24"
+            ]
+          ],
+          "source": "https://www.underarmour.com/en-us/p/ua_clean_up_t-ball_boys_batting_gloves/6000257.html"
+        }
+      ]
+    },
+    "Louisville": {
+      "note": "Louisville Slugger comercializa guantines de bateo en versiones Adult y Youth, pero no publica una tabla numérica universal equivalente a Franklin, Nike o Under Armour para toda la línea Genuine 2.0.",
+      "source": "https://www.slugger.com/en-us/fastpitch/batting-gloves",
+      "sections": [
+        {
+          "title": "Guía por modelo",
+          "note": "Para Louisville mostraremos la nomenclatura exacta del producto (por ejemplo Youth L) y, cuando el fabricante publique una guía específica para ese modelo, se añadirá aquí. No convertimos una talla Louisville usando la tabla de otra marca.",
+          "columns": [],
+          "rows": []
+        }
+      ]
+    }
+  }
+}

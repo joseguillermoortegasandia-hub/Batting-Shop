@@ -1,0 +1,10 @@
+dist/
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Datos privados locales: no subirlos ni siquiera a un repositorio público por accidente.
+private/data/private-seed.csv
+private/supabase/seed.sql
+private/reference-images/

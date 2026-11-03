@@ -1,0 +1,21 @@
+{
+  "name": "Batting Shop",
+  "short_name": "Batting Shop",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f9fc",
+  "theme_color": "#061626",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/assets/images/favicon-64.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/images/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
