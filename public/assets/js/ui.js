@@ -285,8 +285,8 @@
     qsa('[data-open-cart]').forEach(button=>{
       button.setAttribute('aria-controls','cartDrawer');button.setAttribute('aria-expanded','false');
       button.addEventListener('click',async()=>{
-        await window.BattingCart?.render?.({revalidate:true});
         openDrawer('#cartDrawer',button);
+        await window.BattingCart?.render?.({revalidate:true});
       });
     });
     qsa('[data-close-cart]').forEach(button=>button.addEventListener('click',()=>closeDrawer('#cartDrawer')));
