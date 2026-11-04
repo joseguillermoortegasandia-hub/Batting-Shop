@@ -1353,6 +1353,7 @@ html,body {
 [hidden]{display:none!important}
 .category-sheet[aria-hidden="true"]{visibility:hidden}
 .category-sheet[aria-hidden="false"]{visibility:visible}
+.hero-visual>.hero-brand{grid-column:1/-1;width:100%;max-width:420px;height:auto;justify-self:center}
 .drawer-lock{overflow:hidden}
 .header-actions{display:flex;align-items:center;gap:2px}
 .light-icon{color:var(--ink)}

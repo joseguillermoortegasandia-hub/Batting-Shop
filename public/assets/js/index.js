@@ -23,5 +23,14 @@
 
   const firstCategory=visibleCategories[0],hero=firstCategory?byCategory(firstCategory.slug).slice(0,2):[],visual=qs('#heroVisual');visual.replaceChildren();hero.forEach(p=>{const img=window.BattingData.firstProductImage(p);visual.append(el('a',{class:'hero-product',href:window.BattingData.productUrl(p.slug)},el('img',{src:img.url,alt:img.alt||p.name,width:img.width||1000,height:img.height||1000,fetchpriority:'high'}))) });
 
-  function showComingSoon(message){const main=qs('#main');if(!main)return;main.replaceChildren(el('section',{class:'container coming-soon-home'},[el('span',{class:'eyebrow',text:'PRÓXIMAMENTE'}),el('h1',{text:'Estamos preparando Batting Shop'}),el('p',{text:message}),el('p',{class:'section-sub',text:'Puedes escribirnos mientras terminamos de cargar el inventario real.'}),el('a',{class:'btn whatsapp',href:`https://wa.me/${window.BATTING_CONFIG.whatsappE164}?text=${encodeURIComponent('Hola, Batting Shop. Quiero información sobre los próximos productos.')}`,target:'_blank',rel:'noopener',text:'Consultar por WhatsApp'})]));const hero=qs('.desktop-hero');if(hero)hero.hidden=true;const intro=qs('.mobile-intro');if(intro)intro.hidden=true}
+  function showComingSoon(message){
+    // Mantener el diseño visible aunque el propietario aún no publique productos.
+    const root=qs('#homeCategorySections');if(!root)return;
+    root.replaceChildren(el('section',{class:'section container coming-soon-home'},[
+      el('span',{class:'eyebrow',text:'PRÓXIMAMENTE'}),el('h2',{text:'Estamos preparando Batting Shop'}),
+      el('p',{text:message}),el('a',{class:'btn whatsapp',href:`https://wa.me/${window.BATTING_CONFIG.whatsappE164}`,text:'Consultar por WhatsApp'})]));
+    qs('#categoryBrowse').hidden=true;
+    const search=qs('#homeSearch');search.disabled=true;search.placeholder='Todavía no hay productos publicados';
+    const visual=qs('#heroVisual');visual.replaceChildren(el('img',{class:'hero-brand',src:'/assets/images/logo.webp',alt:'Batting Shop',width:500,height:500,fetchpriority:'high'}));
+  }
 })();
