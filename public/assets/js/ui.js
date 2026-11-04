@@ -156,6 +156,8 @@
     syncBodyLock();
   }
 
+  function loadError(root,message='No pudimos cargar el catálogo.'){if(!root)return;root.replaceChildren(el('section',{class:'empty-state load-error'},[el('h1',{text:'No pudimos cargar el catálogo'}),el('p',{text:message}),el('button',{class:'btn primary',type:'button',text:'Reintentar'}),el('a',{class:'btn whatsapp',href:`https://wa.me/${window.BATTING_CONFIG.whatsappE164}`,text:'Escríbenos por WhatsApp'})]));root.querySelector('button').addEventListener('click',()=>location.reload())}
+
   function toast(message,{kind='info',timeout=3200}={}){
     let region=qs('#toastRegion');
     if(!region){
@@ -319,7 +321,7 @@
   }
 
   window.BattingUI={
-    qs,qsa,el,colorSwatch,productCard,favoriteButton,syncFavoriteButton,
+    qs,qsa,el,loadError,colorSwatch,productCard,favoriteButton,syncFavoriteButton,
     openDrawer,closeDrawer,wireChrome,toast,withLoader,setWhatsappContext,
     refreshFloatingWhatsapp,renderCategorySheet
   };

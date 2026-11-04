@@ -3,7 +3,7 @@
   const {qs,el,productCard,withLoader}=window.BattingUI;
   window.BattingUI.wireChrome();window.BattingCart.updateCount();
   let bundle;
-  try{const promise=window.BattingData.loadCatalogBundle();bundle=window.BattingData.catalogCacheState()==='none'?await withLoader(promise,{retry:()=>location.reload()}):await promise}catch(error){console.error(error);showComingSoon('Estamos preparando la primera selección de Batting Shop.');return}
+  try{const promise=window.BattingData.loadCatalogBundle();bundle=window.BattingData.catalogCacheState()==='none'?await withLoader(promise,{retry:()=>location.reload()}):await promise}catch(error){console.error(error);window.BattingUI.loadError(qs('#main'),'El catálogo no está disponible. Reintenta o escríbenos por WhatsApp.');return}
   const catalog=bundle.products||[],categories=bundle.categories||[];
   if(!catalog.length){showComingSoon('Estamos preparando la primera selección de Batting Shop. Muy pronto podrás consultar productos, tallas y disponibilidad desde aquí.');return}
   const byCategory=slug=>catalog.filter(p=>window.BattingData.categorySlug(p)===slug);

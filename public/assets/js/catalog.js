@@ -3,7 +3,7 @@
   const {qs,el,productCard,openDrawer,closeDrawer,toast,withLoader}=window.BattingUI;
   window.BattingUI.wireChrome();window.BattingCart.updateCount();
   let bundle;
-  try{const promise=window.BattingData.loadCatalogBundle();bundle=window.BattingData.catalogCacheState()==='none'?await withLoader(promise,{retry:()=>location.reload()}):await promise}catch(error){console.error(error);renderPreparation('El catálogo está temporalmente en preparación.');return}
+  try{const promise=window.BattingData.loadCatalogBundle();bundle=window.BattingData.catalogCacheState()==='none'?await withLoader(promise,{retry:()=>location.reload()}):await promise}catch(error){console.error(error);window.BattingUI.loadError(qs('#catalogGrid'));return}
   const catalog=bundle.products||[],categories=bundle.categories||[];if(!catalog.length){renderPreparation('Estamos preparando la primera selección de Batting Shop. Muy pronto podrás ver aquí los productos disponibles.');return}
   const params=new URLSearchParams(location.search);
   const readMulti=name=>params.getAll(name).flatMap(x=>x.split(',')).map(x=>x.trim()).filter(Boolean);

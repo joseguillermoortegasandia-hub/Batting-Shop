@@ -119,7 +119,7 @@ img {
   background:var(--red);
   color:#fff;
   font-weight:800;
-  font-size:11px;
+  font-size:12px;
   min-width:18px;
   height:18px;
   border-radius:9px;
@@ -447,7 +447,7 @@ img {
   top:8px;
   background:var(--red);
   color:#fff;
-  font-size:10px;
+  font-size:12px;
   font-weight:900;
   border-radius:999px;
   padding:5px 8px
@@ -1589,7 +1589,7 @@ body.drawer-lock .floating-whatsapp {
   color:#fff;
   display:grid;
   place-items:center;
-  font-size:10px;
+  font-size:12px;
   font-weight:900;
   line-height:1;
   padding-inline:4px;
@@ -1637,7 +1637,7 @@ body.drawer-lock .floating-whatsapp {
     align-items:center;
     justify-content:center;
     gap:3px;
-    font-size:11px;
+    font-size:12px;
     font-weight:750;
     line-height:1.1;
     padding:4px 2px;
@@ -1730,3 +1730,34 @@ body.drawer-lock .floating-whatsapp {
   opacity:0;
   pointer-events:none;
 }
+
+/* Controles accesibles y composición de tarjetas/pedido. */
+.product-card{position:relative;min-width:0}
+.favorite-button{position:relative;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-width:44px;min-height:44px;border:0;padding:12px;background:transparent;border-radius:50%;cursor:pointer;flex:none;isolation:isolate}
+.favorite-button::before{content:"";position:absolute;inset:2px;background:#fff;border:1px solid #cbd5e1;border-radius:50%;z-index:-1}
+.favorite-button img{width:20px;height:20px;object-fit:contain}
+.favorite-button.active::before{background:#d7192d;border-color:#d7192d}
+.favorite-button.active img{filter:brightness(0) invert(1)}
+.card-favorite{position:absolute;right:8px;top:8px;z-index:3}
+.favorite-product::before{inset:0}
+.product-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.product-title-row h1{min-width:0;overflow-wrap:anywhere}
+.cart-item{grid-template-columns:60px minmax(0,1fr);align-items:start}
+.cart-item>img{width:60px;height:60px;aspect-ratio:1}
+.cart-item-info{display:flex;flex-direction:column;gap:6px;min-width:0;overflow-wrap:anywhere}
+.cart-item-info>*{display:block;font-size:14px}
+.cart-item-actions{grid-column:2;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.qty-control{display:flex;align-items:center;gap:8px}
+.qty-control button,.remove-item{min-width:40px;min-height:40px;border:1px solid #cbd5e1;border-radius:8px;background:#fff}
+.remove-item{margin-left:auto;padding:0 8px}
+.accordion summary{min-height:44px;align-content:center;padding-block:12px}
+.loader-logo{width:150px;height:100px;object-fit:contain;margin:auto}
+.softball-track img{width:56px;height:56px;max-width:none}
+.cart-count,.favorite-count,.tag{font-size:12px}
+.card-image,.gallery-main,.hero-product{aspect-ratio:1}
+.category-card img{aspect-ratio:1;object-fit:contain}
+button,input,select,summary{min-height:44px}
+button{min-width:40px}
+.thumb{min-width:44px;min-height:44px}
+.cart-whatsapp{white-space:normal;min-width:0;text-align:center}
+[hidden]{display:none!important}
