@@ -1351,6 +1351,8 @@ html,body {
 
 /* V4 Stage 1 — accesibilidad, CSP estricta y consistencia visual */
 [hidden]{display:none!important}
+.category-sheet[aria-hidden="true"]{visibility:hidden}
+.category-sheet[aria-hidden="false"]{visibility:visible}
 .drawer-lock{overflow:hidden}
 .header-actions{display:flex;align-items:center;gap:2px}
 .light-icon{color:var(--ink)}
