@@ -5,7 +5,7 @@ const nodes=new Map(),storage=new Map();let now=1_800_000_000_000,signedOut=null
 const node=selector=>{if(!nodes.has(selector))nodes.set(selector,{hidden:false,close(){},append(){},textContent:''});return nodes.get(selector)};
 const context={window:{addEventListener(){},BATTING_CONFIG:{}},document:{addEventListener(){},querySelector:node,querySelectorAll(){return[]},createElement(){return {setAttribute(){},remove(){}}}},localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},setInterval(){},setTimeout(){},clearTimeout(){},Date:class extends Date{static now(){return now}},console};
 vm.createContext(context);
-const source=await readFile('public/admin/assets/admin.js','utf8');
+const source=await readFile('panel/assets/admin.js','utf8');
 const expose=`window.testAdmin={parseCsv,validateCsvRows,parseCsvAttributeValue,checkIdle,setSession(){session={user:{id:'admin'}};sb={auth:{async signOut(args){window.signedOut=args}}}},setTaxonomy(){categories=[{id:'category',slug:'guantines',name:'Guantines',variant_mode:'single'}];categoryAttributes=[]}};`;
 vm.runInContext(source.replace(/\}\)\(\);\s*$/,expose+'})();'),context);
 const api=context.window.testAdmin;

@@ -1,8 +1,10 @@
 # Batting Shop V4 — Etapa 3
 
+**Tienda y panel separados:** publicar `dist/` para la tienda y `dist-panel/` para el panel privado. El panel está en `panel/`, fuera de `public/`. [Guía de separación, vistas locales y Cloudflare Access](private/docs/SEPARATE_PANEL.md). La tienda ya no ofrece `/admin/` ni distribuye sus archivos. El inicio conserva su diseño con un catálogo vacío.
+
 Esta entrega es **acumulativa**: contiene Etapa 1 + Etapa 2 + Etapa 3.
 
-> **No publiques la carpeta completa.** `private/` contiene SQL, costos/SKU de preparación, pruebas y referencias. Cloudflare debe publicar únicamente `dist/`, generado con `pnpm run build`.
+> **No publiques la carpeta completa.** `private/` contiene SQL, costos/SKU de preparación, pruebas y referencias. El proyecto público debe publicar únicamente `dist/`, generado con `pnpm run build`; el proyecto privado publica `dist-panel/`, generado con `pnpm run build:panel`.
 
 ## Qué incluye
 
@@ -111,14 +113,14 @@ Output directory: dist
 Node.js: 22+
 ```
 
-El build copia `@supabase/supabase-js@2.117.2` a `/assets/vendor/` solo para /admin. Las páginas públicas no cargan el SDK. No se usan dependencias CDN en producción.
+El build del panel copia `@supabase/supabase-js@2.117.2` a su propia salida dist-panel/assets/vendor/. La salida pública dist/ no incluye esa biblioteca. Las páginas públicas no cargan el SDK. No se usan dependencias CDN en producción.
 
 ## Seguridad
 
 - Sin login para clientes.
 - Storefront: fetch a cuatro RPC públicas, apikey pública, timeout de 4 s y un reintento; no carga supabase-js ni sesiones.
 - Admin: Auth + MFA/AAL2 + RLS.
-- Cloudflare Access recomendado delante de `/admin/*`.
+- Cloudflare Access sobre todo el hostname del panel separado, con validación del JWT en su Worker.
 - CSP estricta sin `unsafe-inline` en estilos.
 - Sin `innerHTML` con datos de Supabase.
 - Costos, stock exacto, SKU y proveedor fuera del payload público.
@@ -158,7 +160,7 @@ Consulta `private/docs/archive-stage2-stage3/STAGE3_TEST_REPORT.md` para límite
 
 ## Configuración de esta revisión
 
-La vista previa local ya está conectada al proyecto Supabase Batting Shop. `.env.local` guarda únicamente URL y clave publicable y está ignorado por Git. Para reconstruir: `pnpm run build:local`. Para servir: `pnpm run preview`, y abrir http://localhost:8080/. No se necesita cuenta de cliente. Con la base sin productos publicados aparece Próximamente; no es un error de conexión.
+La vista previa local ya está conectada al proyecto Supabase Batting Shop. El panel se abre en http://localhost:8081/ y la tienda en http://localhost:8080/. `.env.local` guarda únicamente URL y clave publicable y está ignorado por Git. Para reconstruir: `pnpm run build:local`. Para servir: `pnpm run preview`, y abrir http://localhost:8080/. No se necesita cuenta de cliente. Con la base sin productos publicados aparece Próximamente; no es un error de conexión.
 
 No importar `private/supabase/seed.sql`: el propietario agregará todos los productos. La base conectada quedó sin productos, variantes, imágenes ni inventario. Después de 004 se aplica también la migración `20261104005057_restrict_function_grants.sql`, que elimina permisos directos heredados de funciones internas y mantiene solo las cuatro RPC públicas.
 
@@ -169,8 +171,8 @@ browser_smoke usa Google Chrome instalado; también acepta PLAYWRIGHT_EXECUTABLE
 
 En Pages configura SUPABASE_URL y SUPABASE_ANON_KEY **para el build y para el Worker en tiempo de ejecución**, tanto en producción como en preview. Deben apuntar al mismo proyecto: la CSP se genera con ese origen exacto. No se cargan archivos .env automáticamente. Nunca uses service_role ni sb_secret en estas variables públicas. Las claves anon/publishable son públicas por diseño; RLS y las RPC limitan los datos accesibles. Las claves privadas pertenecen solo al servidor/gestor de secretos y no al repositorio.
 
-Mantén el repositorio privado. Publica exclusivamente dist/, nunca la raíz ni private/.
-Protege /admin/* con Cloudflare Access; desactiva signup público en Supabase Auth; configura Turnstile compatible con Auth o límites de intentos en el login. Esto requiere configurar los servicios reales y no queda activado por cambiar el código. La sesión del admin se cierra localmente tras 30 minutos sin actividad, incluso al volver a una pestaña suspendida. La caducidad del token en el servidor debe configurarse además en Supabase.
+Mantén el repositorio privado. Publica dist/ en el proyecto de tienda y dist-panel/ en el proyecto del panel; nunca la raíz ni private/.
+Protege el hostname completo del panel con Cloudflare Access; desactiva signup público en Supabase Auth; configura Turnstile compatible con Auth o límites de intentos en el login. Esto requiere configurar los servicios reales y no queda activado por cambiar el código. La sesión del admin se cierra localmente tras 30 minutos sin actividad, incluso al volver a una pestaña suspendida. La caducidad del token en el servidor debe configurarse además en Supabase.
 
 HSTS se envía en _headers y Worker con max-age=31536000; activa HTTPS en el dominio y comprueba los headers reales de producción. No se solicita preload ni includeSubDomains sin revisar todos los subdominios.
 

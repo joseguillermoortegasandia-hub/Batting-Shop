@@ -18,17 +18,25 @@ def main():
  from playwright.sync_api import sync_playwright
  OUT.mkdir(parents=True,exist_ok=True)
  with tempfile.TemporaryDirectory(prefix='browser_',dir=ROOT/'artifacts') as td:
-  env=os.environ.copy();env.update(SUPABASE_URL='https://mock.supabase.co',SUPABASE_ANON_KEY='mock-public-key',SKIP_SITEMAP_API='1',BS_OUTPUT_DIR=Path(td).relative_to(ROOT).as_posix(),SITE_URL='http://localhost:8080');env.pop('CF_PAGES_BRANCH',None);env.pop('CF_PAGES_URL',None)
+  env=os.environ.copy();env.update(SUPABASE_URL='https://mock.supabase.co',SUPABASE_ANON_KEY='mock-public-key',SKIP_SITEMAP_API='1',BS_OUTPUT_DIR=Path(td).relative_to(ROOT).as_posix()+'/store',SITE_URL='http://localhost:8080');env.pop('CF_PAGES_BRANCH',None);env.pop('CF_PAGES_URL',None)
   subprocess.run(['node','build.mjs'],cwd=ROOT,env=env,check=True)
   class Handler(SimpleHTTPRequestHandler):
    protocol_version='HTTP/1.1'
-   def __init__(self,*args,**kwargs):super().__init__(*args,directory=td,**kwargs)
+   def __init__(self,*args,**kwargs):super().__init__(*args,directory=str(Path(td)/'store'),**kwargs)
    def do_GET(self):
     if urlparse(self.path).path.startswith('/producto/'):self.path='/producto/index.html'
     return super().do_GET()
    def log_message(self,*_):pass
   class Server(ThreadingHTTPServer):request_queue_size=128
   server=Server(('127.0.0.1',0),Handler);thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start();origin=f'http://127.0.0.1:{server.server_port}'
+  panel_dir=Path(td)/'panel'
+  panel_env={**env,'BS_PANEL_OUTPUT_DIR':panel_dir.relative_to(ROOT).as_posix(),'PANEL_URL':'http://localhost:8081','STOREFRONT_URL':origin}
+  subprocess.run(['node','build-panel.mjs'],cwd=ROOT,env=panel_env,check=True)
+  class PanelHandler(SimpleHTTPRequestHandler):
+   protocol_version='HTTP/1.1'
+   def __init__(self,*args,**kwargs):super().__init__(*args,directory=str(panel_dir),**kwargs)
+   def log_message(self,*args):pass
+  panel_server=Server(('127.0.0.1',0),PanelHandler);panel_thread=threading.Thread(target=panel_server.serve_forever,daemon=True);panel_thread.start();panel_origin=f'http://127.0.0.1:{panel_server.server_port}'
   state={'mode':'ok','price':29.99,'available':True,'calls':0}
   def route_rpc(route):
    state['calls']+=1;name=route.request.url.rsplit('/',1)[-1];args=route.request.post_data_json or {};data=None
@@ -77,19 +85,23 @@ def main():
     context.close()
     for mode in ['empty','error']:
      state['mode']=mode;context=browser.new_context();context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/');page.wait_for_timeout(700)
-     text=page.locator('#main').inner_text();check(f'Estado {mode}',('PRÓXIMAMENTE' in text) if mode=='empty' else ('PRÓXIMAMENTE' not in text and 'Reintentar' in text));context.close()
+     text=page.locator('#main').inner_text();check(f'Estado {mode}',('PRÓXIMAMENTE' in text) if mode=='empty' else ('PRÓXIMAMENTE' not in text and 'Reintentar' in text))
+     if mode=='empty':
+      for width in WIDTHS:
+       page.set_viewport_size({'width':width,'height':900});inspect(page,f'{width} inicio vacio');shot(page,width,'home-empty')
+     context.close()
     state['mode']='ok';context=browser.new_context();context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/');page.wait_for_selector('.product-card')
     invalid=page.evaluate('async()=>{try{await BattingData.revalidateCart(Array.from({length:51},(_,i)=>String(i)));return false}catch(e){return e.message.includes("50")}}');check('Rechaza >50 ids antes de red',invalid)
     page.evaluate('(item)=>{BattingCart.write([item]);return BattingCart.render({revalidate:true})}',ITEM);page.evaluate('BattingUI.openDrawer("#cartDrawer")');state['price']=35
     # Fuerza caducidad mediante cambio del carrito: firma distinta requiere validación.
     page.evaluate('()=>{const a=BattingCart.read();a[0].qty=3;BattingCart.write(a)}');page.locator('#cartWhatsapp').click();page.wait_for_timeout(300);check('Cambio de precio exige segundo clic',page.url.startswith(origin) and page.locator('#cartTotal').inner_text()=='$105.00')
-    page.goto(origin+'/admin/');page.wait_for_function('!!window.BattingImages')
+    page.evaluate('localStorage.setItem("store-test-marker","store")');page.goto(panel_origin+'/');page.wait_for_function('!!window.BattingImages');check('Panel login separado visible',page.locator('#loginPanel').is_visible() and not page.locator('#adminApp').is_visible());check('Panel no comparte storage con tienda',page.evaluate('localStorage.getItem("store-test-marker")') is None);check('Ver tienda apunta a origen publico',page.get_by_role('link',name='Ver tienda',exact=True).get_attribute('href')==origin)
     converted=page.evaluate("""async()=>{const canvas=document.createElement('canvas');canvas.width=2400;canvas.height=1800;const ctx=canvas.getContext('2d');ctx.fillStyle='red';ctx.fillRect(0,0,2400,1800);const source=await new Promise(r=>canvas.toBlob(r,'image/png'));const result=await BattingImages.prepare(new File([source],'test.png',{type:'image/png'}));const thumb=await createImageBitmap(result.thumbnail);return {width:result.width,height:result.height,type:result.full.type,jpgType:result.jpg.type,jpgSize:result.jpg.size,thumb:thumb.width}}""")
     check('Foto WebP 1600px',converted['width']==1600 and converted['height']==1600 and converted['type']=='image/webp')
     check('Miniatura 480px y JPG <=300KB',converted['thumb']==480 and converted['jpgType']=='image/jpeg' and converted['jpgSize']<=300*1024)
     rejected=page.evaluate("""async()=>{const c=document.createElement('canvas');c.width=c.height=400;const b=await new Promise(r=>c.toBlob(r,'image/png'));try{await BattingImages.prepare(new File([b],'small.png',{type:'image/png'}));return false}catch{return true}}""");check('Rechaza foto menor a 800px',rejected)
     context.close();browser.close()
-  finally:server.shutdown();server.server_close();thread.join()
+  finally:server.shutdown();server.server_close();thread.join();panel_server.shutdown();panel_server.server_close();panel_thread.join()
  print(f'{sum(checks)}/{len(checks)} comprobaciones de navegador correctas; capturas: {OUT}')
  return 0 if all(checks) else 1
 if __name__=='__main__':sys.exit(main())

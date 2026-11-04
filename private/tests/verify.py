@@ -18,14 +18,15 @@ def main():
   check('Sintaxis SQL y PLpgSQL 004',True)
  except Exception as error:check('Sintaxis SQL y PLpgSQL 004',False,str(error))
  result=subprocess.run(['node','private/tests/admin_test.mjs'],cwd=ROOT,capture_output=True,text=True);check('Validacion de entradas y sesion admin',result.returncode==0,result.stdout+result.stderr)
- for p in [*ROOT.glob('public/**/*.js'),ROOT/'build.mjs']:
+ for p in [*ROOT.glob('public/**/*.js'),*ROOT.glob('panel/**/*.js'),ROOT/'build.mjs',ROOT/'build-panel.mjs']:
   result=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
   check(f'Sintaxis {p.relative_to(ROOT)}',result.returncode==0,result.stderr)
- paths=subprocess.check_output(['git','ls-files','-z'],cwd=ROOT).decode().split('\0')
+ paths=subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'],cwd=ROOT).decode().split('\0')
  secret=re.compile(r'(?:ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}|sb_secret_[A-Za-z0-9_]{20,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|AKIA[A-Z0-9]{16})')
  leaks=[]
  for path in filter(None,paths):
   p=ROOT/path
+  if not p.is_file():continue
   if p.suffix.lower() in {'.js','.mjs','.html','.sql','.json','.yaml','.md','.txt','.csv'}:
    content=p.read_text(encoding='utf-8')
    if secret.search(content):leaks.append(path)
@@ -47,11 +48,12 @@ def main():
    check('Worker timeout 2.5s y cache 60s','2500' in worker and 'max-age=60' in worker)
    for page in ['index.html','catalogo.html','producto/index.html','favoritos.html','tallas.html']:
     html=(out/page).read_text(encoding='utf-8');check(f'{page}: sin SDK publico ni placeholders','assets/vendor/supabase-' not in html and '<!--BS_' not in html)
-   check('SDK solo en admin','assets/vendor/supabase-' in (out/'admin/index.html').read_text(encoding='utf-8'))
+   check('Tienda sin SDK ni archivos privados',not (out/'admin').exists() and not list(out.rglob('supabase-*.js')))
    check('Sin SQL ni datos privados desplegados',not any(p.suffix in {'.sql','.csv'} and 'admin/import-template.csv' not in p.as_posix() for p in out.rglob('*')))
    result=subprocess.run(['node','private/tests/worker_test.mjs',str(out/'_worker.js')],cwd=ROOT,capture_output=True,text=True);check('Contrato Worker con mocks locales',result.returncode==0,result.stdout+result.stderr)
   for label,extra in [('Origen invalido',{'SUPABASE_URL':'https://evil.example'}),('Clave secreta',{'SUPABASE_ANON_KEY':'sb_secret_forbidden'}),('Produccion sin dominio',{'CF_PAGES_BRANCH':'main'})]:
    result=build(extra);check('Rechaza '+label,result.returncode!=0,result.stdout+result.stderr)
   result=build({'CF_PAGES_BRANCH':'main','SITE_URL':'https://shop.example.com'});check('Build produccion configurada',result.returncode==0,result.stdout+result.stderr)
+ result=subprocess.run([sys.executable,'private/tests/separation_test.py'],cwd=ROOT,capture_output=True,text=True);check('Separacion HTTP y autenticacion criptografica del panel',result.returncode==0,result.stdout+result.stderr)
  print(f'{sum(checks)}/{len(checks)} comprobaciones correctas');return 0 if all(checks) else 1
 if __name__=='__main__':sys.exit(main())
