@@ -25,7 +25,7 @@ async function productFromSupabase(env, slug, origin) {
   try {
     const response = await fetch(`${env.SUPABASE_URL.replace(/\/+$/, '')}/rest/v1/rpc/get_public_product`, {
       method: 'POST', signal: controller.signal,
-      headers: {apikey: env.SUPABASE_ANON_KEY, Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json'},
+      headers: {apikey: env.SUPABASE_ANON_KEY, ...(env.SUPABASE_ANON_KEY.startsWith('eyJ')?{Authorization:`Bearer ${env.SUPABASE_ANON_KEY}`}:{ }), 'Content-Type': 'application/json'},
       body: JSON.stringify({p_slug: slug})
     });
     if (!response.ok) throw new Error(`Supabase ${response.status}`);

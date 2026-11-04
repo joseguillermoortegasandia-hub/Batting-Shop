@@ -14,7 +14,7 @@
     for(let attempt=0;attempt<2;attempt++){
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),4000);
       try{const response=await fetch(`${cfg.supabaseUrl.replace(/\/+$/,'')}/rest/v1/rpc/${name}`,{
-        method:'POST',signal:controller.signal,headers:{apikey:cfg.supabaseAnonKey,Authorization:`Bearer ${cfg.supabaseAnonKey}`,'Content-Type':'application/json'},body:JSON.stringify(args)
+        method:'POST',signal:controller.signal,headers:{apikey:cfg.supabaseAnonKey,...(cfg.supabaseAnonKey.startsWith('eyJ')?{Authorization:`Bearer ${cfg.supabaseAnonKey}`}:{ }),'Content-Type':'application/json'},body:JSON.stringify(args)
       });if(!response.ok){const error=new Error('No pudimos cargar los datos.');error.retryable=response.status>=500||response.status===429;throw error}return {data:await response.json(),error:null};
       }catch(error){if(attempt||error.retryable===false)throw error}finally{clearTimeout(timer)}
     }

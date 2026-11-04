@@ -158,6 +158,10 @@ Consulta `private/docs/archive-stage2-stage3/STAGE3_TEST_REPORT.md` para límite
 
 ## Configuración de esta revisión
 
+La vista previa local ya está conectada al proyecto Supabase Batting Shop. `.env.local` guarda únicamente URL y clave publicable y está ignorado por Git. Para reconstruir: `pnpm run build:local`. Para servir: `pnpm run preview`, y abrir http://localhost:8080/. No se necesita cuenta de cliente. Con la base sin productos publicados aparece Próximamente; no es un error de conexión.
+
+No importar `private/supabase/seed.sql`: el propietario agregará todos los productos. La base conectada quedó sin productos, variantes, imágenes ni inventario. Después de 004 se aplica también la migración `20261104005057_restrict_function_grants.sql`, que elimina permisos directos heredados de funciones internas y mantiene solo las cuatro RPC públicas.
+
 Instalación: `pnpm install --frozen-lockfile`. No usar npm install; preinstall lo rechaza.
 Los comandos npm run build / npm run test:browser siguen disponibles para ejecutar los scripts solicitados, sin instalar paquetes con npm.
 Preparación de tests en Windows: `python -m pip install -r private/tests/requirements.txt`.

@@ -2,6 +2,7 @@ dist/
 node_modules/
 artifacts/
 __pycache__/
+private/supabase/.temp/
 .DS_Store
 .env
 .env.*
