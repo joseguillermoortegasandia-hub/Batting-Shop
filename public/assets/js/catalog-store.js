@@ -1,10 +1,10 @@
 (function(){
   'use strict';
   const cfg=window.BATTING_CONFIG||{};
-  const CATALOG_KEY='batting-shop-public-catalog-v4';
-  const PRODUCT_PREFIX='batting-shop-public-product-v4:';
+  const CATALOG_KEY='batting-shop-public-catalog-v5';
+  const PRODUCT_PREFIX='batting-shop-public-product-v5:';
   const CACHE_FRESH_MS=60_000,CACHE_STALE_MS=120_000;
-  let client=null,inFlight=null;
+  let inFlight=null;
 
   function validConfigValue(value){const text=String(value||'').trim();return Boolean(text&&!/^__.+__$/.test(text))}
   function configured(){return Boolean(cfg.useSupabase&&validConfigValue(cfg.supabaseUrl)&&validConfigValue(cfg.supabaseAnonKey))}
@@ -21,7 +21,7 @@
   }
   function getClient(){return configured()?{rpc}:null}
   function normalizeText(value){return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
-  function storageUrl(path){const value=String(path||'').trim();if(!value)return '/assets/images/logo.webp';if(value.startsWith('/'))return value;if(!configured())return '/assets/images/logo.webp';return `${String(cfg.supabaseUrl).replace(/\/+$/,'')}/storage/v1/object/public/product-images/${value.split('/').map(encodeURIComponent).join('/')}`}
+  function storageUrl(path){const value=String(path||'').trim();if(!value)return '/assets/images/logo.webp';if(value.startsWith('/')&&!value.startsWith('//'))return value;if(value.startsWith('//'))return '/assets/images/logo.webp';if(!configured())return '/assets/images/logo.webp';return `${String(cfg.supabaseUrl).replace(/\/+$/,'')}/storage/v1/object/public/product-images/${value.split('/').map(encodeURIComponent).join('/')}`}
   function normalizeImage(image){return {...image,url:storageUrl(image?.storagePath),thumbnailUrl:storageUrl(image?.thumbnailPath||image?.storagePath)}}
   function optionSort(options){return (Array.isArray(options)?options:[]).slice().sort((a,b)=>(Number(a?.sort_order)||0)-(Number(b?.sort_order)||0)||String(a?.label||a?.value||'').localeCompare(String(b?.label||b?.value||''),'es',{numeric:true}))}
   function normalizeCategory(c){return {...c,sortOrder:Number(c?.sortOrder)||0,homeLimit:Number(c?.homeLimit)||8,searchKeywords:Array.isArray(c?.searchKeywords)?c.searchKeywords:[],attributes:(Array.isArray(c?.attributes)?c.attributes:[]).map(a=>({...a,sortOrder:Number(a?.sortOrder)||0,options:optionSort(a?.options)})).sort((a,b)=>a.sortOrder-b.sortOrder||String(a.label).localeCompare(String(b.label),'es'))}}

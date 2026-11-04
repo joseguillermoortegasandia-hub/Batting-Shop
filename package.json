@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node build.mjs",
     "verify": "python private/tests/verify.py",
-    "test:browser": "python private/tests/browser_smoke.py"
+    "test:browser": "python private/tests/browser_smoke.py",
+    "preinstall": "node private/scripts/check-package-manager.mjs"
   },
   "description": "Batting Shop V4 Stage 3 — alias de slugs, CSV dinámico attr: y cierre acumulativo de las tres etapas.",
   "engines": {

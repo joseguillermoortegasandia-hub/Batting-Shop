@@ -47,6 +47,7 @@
     if(!button)return;
     const active=Boolean(window.BattingFavorites?.has?.(slug));
     button.classList.toggle('active',active);
+    const icon=button.querySelector('img');if(icon)icon.src=active?'/assets/icons/heart-filled.svg':'/assets/icons/heart.svg';
     button.setAttribute('aria-pressed',String(active));
     button.setAttribute('aria-label',`${active?'Quitar':'Agregar'} ${slug?'este producto':'producto'} ${active?'de':'a'} favoritos`);
   }

@@ -1736,8 +1736,8 @@ body.drawer-lock .floating-whatsapp {
 .favorite-button{position:relative;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;min-width:44px;min-height:44px;border:0;padding:12px;background:transparent;border-radius:50%;cursor:pointer;flex:none;isolation:isolate}
 .favorite-button::before{content:"";position:absolute;inset:2px;background:#fff;border:1px solid #cbd5e1;border-radius:50%;z-index:-1}
 .favorite-button img{width:20px;height:20px;object-fit:contain}
-.favorite-button.active::before{background:#d7192d;border-color:#d7192d}
-.favorite-button.active img{filter:brightness(0) invert(1)}
+.favorite-button.active::before{background:#fff;border-color:#d7192d}
+.favorite-button.active img{filter:none}
 .card-favorite{position:absolute;right:8px;top:8px;z-index:3}
 .favorite-product::before{inset:0}
 .product-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px}

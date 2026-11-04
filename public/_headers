@@ -16,13 +16,28 @@
 /catalogo.html
   Cache-Control: no-store
 
+/catalogo
+  Cache-Control: no-store
+
+/favoritos.html
+  Cache-Control: no-store
+
+/favoritos
+  Cache-Control: no-store
+
 /producto/*
   Cache-Control: no-store
 
 /tallas.html
   Cache-Control: no-store
 
+/tallas
+  Cache-Control: no-store
+
 /404.html
+  Cache-Control: no-store
+
+/404
   Cache-Control: no-store
 
 /manifest.webmanifest
