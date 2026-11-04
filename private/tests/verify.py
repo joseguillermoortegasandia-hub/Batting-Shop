@@ -1,6 +1,6 @@
 """Verificación no destructiva: builds temporales; no falsifica vendor."""
 from pathlib import Path
-import json, os, re, subprocess, tempfile, sys
+import base64, json, os, re, subprocess, tempfile, sys
 ROOT=Path(__file__).resolve().parents[2]
 checks=[]
 def check(name,ok,detail=''):
@@ -10,6 +10,13 @@ def main():
  pkg=json.loads(read('package.json'))
  check('pnpm fijado y lockfile',pkg['packageManager']=='pnpm@11.5.1' and (ROOT/'pnpm-lock.yaml').exists())
  check('Migracion y rollback 004',(ROOT/'private/supabase/migrations/004_security_performance.sql').exists() and (ROOT/'private/supabase/rollback/004_security_performance.rollback.sql').exists())
+ from pglast import parse_sql,parse_plpgsql
+ sql_paths=list((ROOT/'private/supabase').rglob('*.sql'))
+ try:
+  for path in sql_paths:parse_sql(path.read_text(encoding='utf-8'))
+  parse_plpgsql(read('private/supabase/migrations/004_security_performance.sql'))
+  check('Sintaxis SQL y PLpgSQL 004',True)
+ except Exception as error:check('Sintaxis SQL y PLpgSQL 004',False,str(error))
  result=subprocess.run(['node','private/tests/admin_test.mjs'],cwd=ROOT,capture_output=True,text=True);check('Validacion de entradas y sesion admin',result.returncode==0,result.stdout+result.stderr)
  for p in [*ROOT.glob('public/**/*.js'),ROOT/'build.mjs']:
   result=subprocess.run(['node','--check',str(p)],capture_output=True,text=True)
@@ -19,7 +26,13 @@ def main():
  leaks=[]
  for path in filter(None,paths):
   p=ROOT/path
-  if p.suffix.lower() in {'.js','.mjs','.html','.sql','.json','.yaml','.md','.txt','.csv'} and secret.search(p.read_text(encoding='utf-8')):leaks.append(path)
+  if p.suffix.lower() in {'.js','.mjs','.html','.sql','.json','.yaml','.md','.txt','.csv'}:
+   content=p.read_text(encoding='utf-8')
+   if secret.search(content):leaks.append(path)
+   for token in re.findall(r'eyJ[A-Za-z0-9_-]+\.([A-Za-z0-9_-]+)\.[A-Za-z0-9_-]+',content):
+    try:
+     if json.loads(base64.urlsafe_b64decode(token+'='*(-len(token)%4))).get('role')=='service_role':leaks.append(path)
+    except (ValueError,UnicodeError):pass
  check('Sin claves privadas reconocibles en archivos versionados',not leaks,str(leaks))
  (ROOT/'artifacts').mkdir(exist_ok=True)
  with tempfile.TemporaryDirectory(prefix='verify_',dir=ROOT/'artifacts') as td:
