@@ -3,7 +3,8 @@ import {join,extname,basename} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const root=fileURLToPath(new URL('.',import.meta.url));
-const source=join(root,'public'),output=join(root,'dist');
+const source=join(root,'public'),output=join(root,process.env.BS_OUTPUT_DIR||'dist');
+if(process.env.BS_OUTPUT_DIR&&!/^artifacts[\\/][a-zA-Z0-9_\\/-]+$/.test(process.env.BS_OUTPUT_DIR))throw new Error('BS_OUTPUT_DIR debe estar dentro de artifacts/');
 const VERSION='2.117.2';
 const vendorSource=join(root,'node_modules','@supabase','supabase-js','dist','umd','supabase.js');
 const vendorOutputRel=`assets/vendor/supabase-${VERSION}.js`;
