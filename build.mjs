@@ -1,13 +1,10 @@
-import {cp,rm,mkdir,readFile,writeFile,readdir,stat,access} from 'node:fs/promises';
+import {cp,rm,mkdir,readFile,writeFile,readdir,stat} from 'node:fs/promises';
 import {join,extname,basename} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const root=fileURLToPath(new URL('.',import.meta.url));
 const source=join(root,'public'),output=join(root,process.env.BS_OUTPUT_DIR||'dist');
 if(process.env.BS_OUTPUT_DIR&&!/^artifacts[\\/][a-zA-Z0-9_\\/-]+$/.test(process.env.BS_OUTPUT_DIR))throw new Error('BS_OUTPUT_DIR debe estar dentro de artifacts/');
-const VERSION='2.117.2';
-const vendorSource=join(root,'node_modules','@supabase','supabase-js','dist','umd','supabase.js');
-const vendorOutputRel=`assets/vendor/supabase-${VERSION}.js`;
 const siteUrlInput=String(process.env.SITE_URL||'').trim().replace(/\/+$/,'');
 const cfPagesUrl=String(process.env.CF_PAGES_URL||'').trim().replace(/\/+$/,'');
 const cfBranch=String(process.env.CF_PAGES_BRANCH||'').trim();
@@ -33,7 +30,7 @@ if(isCloudflare&&!isProduction&&!siteUrlInput)warn(`preview de Cloudflare: canon
 if(supabaseUrl&&!validSupabaseUrl(supabaseUrl))fail('SUPABASE_URL debe tener el formato https://<proyecto>.supabase.co.');
 if(isRemote&&(!supabaseUrl||!supabaseAnonKey))fail('un despliegue remoto necesita SUPABASE_URL y SUPABASE_ANON_KEY.');
 if(isForbiddenFrontendKey(supabaseAnonKey))fail('SUPABASE_ANON_KEY parece una clave secreta/service_role. Usa únicamente la anon/publishable key pública.');
-try{await access(vendorSource)}catch{fail(`falta @supabase/supabase-js@${VERSION}. Ejecuta pnpm install antes de construir. Producción no usa CDN.`)}
+
 
 const pages={
   'index.html':{title:'Batting Shop | Guantines y accesorios de béisbol',description:'Guantines de bateo y accesorios originales. Envíos a toda Venezuela y atención directa por WhatsApp.',canonical:'/',script:'/assets/js/index.js'},
@@ -55,7 +52,7 @@ const chrome=`<header class="site-header"><div class="header-inner"><button clas
 const footer=`<footer class="site-footer" id="contacto"><div class="footer-inner"><div class="footer-brand"><img src="/assets/images/logo.webp" alt="Batting Shop"><p>Guantines de bateo y accesorios originales. Atención directa, delivery en Maracaibo y envíos a toda Venezuela.</p></div><div class="footer-links"><strong>Contacto</strong><a data-config-href="instagram" target="_blank" rel="noopener"><span data-config-text="instagram"></span></a><a data-config-href="whatsapp" target="_blank" rel="noopener"><span data-config-text="whatsapp"></span></a><span data-config-text="location"></span><span data-config-text="shipping"></span></div><div><strong>Métodos de pago</strong><div class="payments"><span class="pay-pill">Zelle</span><span class="pay-pill">Binance</span><span class="pay-pill">Pago Móvil</span></div></div><div class="footer-links"><strong>Explora</strong><a href="/catalogo.html">Catálogo</a><a href="/favoritos.html">Favoritos</a><a href="/tallas.html">Guía de tallas</a><a href="/#contacto">Contacto</a></div></div></footer>`;
 function scripts(meta){return `<script src="/assets/js/config.js" defer></script><script src="/assets/js/site-config.js" defer></script><script src="/assets/js/storage.js" defer></script><script src="/assets/js/catalog-store.js" defer></script><script src="/assets/js/favorites.js" defer></script><script src="/assets/js/ui.js" defer></script><script src="/assets/js/cart.js" defer></script>${meta.script?`<script src="${meta.script}" defer></script>`:''}<script src="/assets/js/bootstrap.js" defer></script>`}
 
-await rm(output,{recursive:true,force:true});await mkdir(output,{recursive:true});await cp(source,output,{recursive:true});await mkdir(join(output,'assets','vendor'),{recursive:true});await cp(vendorSource,join(output,vendorOutputRel));
+await rm(output,{recursive:true,force:true});await mkdir(output,{recursive:true});await cp(source,output,{recursive:true});
 for(const [rel,meta] of Object.entries(pages)){const file=join(output,rel);let html=await readFile(file,'utf8');html=html.replace('<!--BS_HEAD-->',sharedHead(meta)).replace('<!--BS_CHROME-->',chrome).replace('<!--BS_FOOTER-->',footer).replace('<!--BS_SCRIPTS-->',scripts(meta));await writeFile(file,html)}
 const textExts=new Set(['.html','.js','.css','.json','.webmanifest','.txt','.xml','.svg']);for(const file of await walk(output)){const ext=extname(file).toLowerCase();if(!textExts.has(ext)&&basename(file)!=='_headers')continue;let content=await readFile(file,'utf8');content=content.replaceAll('__SITE_URL__',siteUrl).replaceAll('__SUPABASE_URL__',safeReplacement(supabaseUrl)).replaceAll('__SUPABASE_ANON_KEY__',safeReplacement(supabaseAnonKey));await writeFile(file,content)}
 
@@ -69,5 +66,6 @@ const headersFile=join(output,'_headers');await writeFile(headersFile,(await rea
 await writeFile(join(output,'_worker.js'),worker);
 
 const forbiddenBasenames=new Set(['private-seed.csv','seed.sql','schema.sql','TEST_REPORT.md','SECURITY.md','IMPLEMENTED.md','IMAGE_ASSETS.md','verify.py']);const deployed=await walk(output);const leaks=deployed.filter(file=>forbiddenBasenames.has(basename(file))||file.includes('/private/')||file.includes('/tests/')||file.endsWith('.sql'));if(leaks.length)fail(`se detectaron archivos privados en dist: ${leaks.join(', ')}`);
-for(const file of deployed){if(!textExts.has(extname(file).toLowerCase())&&basename(file)!=='_headers'&&basename(file)!=='_worker.js')continue;const content=await readFile(file,'utf8');if(/__(SITE_URL|SUPABASE_URL|SUPABASE_ANON_KEY)__/.test(content))fail(`placeholder sin reemplazar en ${file}`);if(/https:\/\/battingshop\.ve(?:\/|\b)/i.test(content))fail(`dominio hardcodeado en ${file}`);if(/\sstyle\s*=\s*["']/i.test(content))fail(`CSP estricta: todavía existe style= inline en ${file}`);if(/cdn\.jsdelivr\.net/i.test(content))fail(`dependencia CDN detectada en ${file}`)}
-console.log(`Batting Shop V4 Final listo en dist/ para ${siteUrl}`);console.log(`Rama: ${cfBranch||'local'} · producción: ${isProduction?'sí':'no'} · noindex: ${noindex?'sí':'no'}`);console.log('Supabase JS se sirve localmente desde /assets/vendor/.');
+if(deployed.some(file=>/\/(?:admin|panel)\//i.test(file.slice(output.length).replaceAll('\\','/'))))fail('Archivos privados fuera de su salida separada.');
+for(const file of deployed){if(!textExts.has(extname(file).toLowerCase())&&basename(file)!=='_headers'&&basename(file)!=='_worker.js')continue;const content=await readFile(file,'utf8');if(/(?:\badmin\b|supabase-js|createClient|admin_users)/i.test(content))fail('Referencia privada en la salida pública: '+file);if(/__(SITE_URL|SUPABASE_URL|SUPABASE_ANON_KEY)__/.test(content))fail(`placeholder sin reemplazar en ${file}`);if(/https:\/\/battingshop\.ve(?:\/|\b)/i.test(content))fail(`dominio hardcodeado en ${file}`);if(/\sstyle\s*=\s*["']/i.test(content))fail(`CSP estricta: todavía existe style= inline en ${file}`);if(/cdn\.jsdelivr\.net/i.test(content))fail(`dependencia CDN detectada en ${file}`)}
+console.log(`Batting Shop V4 Final listo en dist/ para ${siteUrl}`);console.log(`Rama: ${cfBranch||'local'} · producción: ${isProduction?'sí':'no'} · noindex: ${noindex?'sí':'no'}`);console.log('La salida pública contiene únicamente la tienda.');

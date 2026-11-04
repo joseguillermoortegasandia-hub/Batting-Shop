@@ -57,7 +57,3 @@
 
 /assets/js/*
   Cache-Control: public, max-age=3600, must-revalidate
-
-/admin/*
-  Cache-Control: no-store
-  X-Robots-Tag: noindex, nofollow, noarchive
