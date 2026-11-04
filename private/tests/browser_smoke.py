@@ -78,6 +78,18 @@ def main():
      page.evaluate('BattingUI.closeDrawer("#cartDrawer");BattingFavorites.save(["guante-franklin"])');page.goto(origin+'/favoritos.html');page.wait_for_selector('.product-card');inspect(page,f'{width} favoritos');shot(page,width,'favoritos')
      page.evaluate('async()=>{await BattingUI.renderCategorySheet();BattingUI.openDrawer("#categorySheet")}');inspect(page,f'{width} categorias');shot(page,width,'categorias');page.keyboard.press('Escape')
      matches=page.evaluate('async()=>{const b=await BattingData.loadCatalogBundle();return b.products.filter(p=>BattingData.matchesSearch(p,"guante")).map(p=>p.category.slug)}');check(f'{width} guante solo guantines',matches==['guantines'],str(matches));check(f'{width} sin errores JS',not errors,str(errors));context.close()
+    # Guías de las cuatro marcas: tablas visibles, sin avisos ni enlaces externos.
+    context=browser.new_context();context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page()
+    for width in [320,390,768,1366]:
+     page.set_viewport_size({'width':width,'height':900});page.goto(origin+'/tallas.html?marca=Louisville');page.wait_for_selector('.size-table')
+     for brand in ['Franklin','Nike','Under Armour','Louisville']:
+      page.get_by_role('button',name=brand,exact=True).click()
+      check(f'{width} tabla {brand}',page.locator('.size-table tbody tr').count()>0)
+      check(f'{width} {brand} sin avisos ni fuentes externas',page.locator('.guide-note, #guideContent a').count()==0)
+      inspect(page,f'{width} tallas {brand}')
+     check(f'{width} Louisville modelo identificado','TPX Pro' in page.locator('#guideContent').inner_text() and page.locator('.size-table tbody tr').count()==10)
+     shot(page,width,'tallas-louisville')
+    context.close()
     # Estados y tiempos del loader sin tocar dependencias ni fuentes.
     context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/');page.wait_for_selector('.product-card')
     page.evaluate('''()=>{window.loaderStart=performance.now();window.loaderPromise=BattingUI.withLoader(new Promise(r=>setTimeout(r,500)));}''');page.wait_for_timeout(200);check('Loader oculto antes de 350ms',not page.locator('#globalLoader').is_visible());page.wait_for_timeout(180);check('Loader visible y logo',page.locator('#globalLoader').is_visible() and page.locator('.loader-logo').is_visible());ball=page.locator('.softball-track img').evaluate('(e)=>parseFloat(getComputedStyle(e).width)');check('Pelota 56px',ball==56);page.wait_for_timeout(400);check('Loader minimo 400ms',page.locator('#globalLoader').is_visible());page.wait_for_timeout(200);check('Loader termina',not page.locator('#globalLoader').is_visible())

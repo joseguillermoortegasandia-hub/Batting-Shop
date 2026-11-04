@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-05",
+  "updated": "2026-11-03",
   "brands": {
     "Franklin": {
       "note": "Franklin mide desde la base de la palma hasta la punta del dedo medio. Las tallas juveniles y adultas no son equivalentes.",
@@ -177,7 +177,7 @@
       ]
     },
     "Under Armour": {
-      "note": "Under Armour usa SM/MD/LG para adulto y YSM/YMD/YLG para juvenil. En el catálogo la talla puede normalizarse para filtrar, pero siempre se muestra la nomenclatura oficial de la marca.",
+      "note": "Under Armour usa SM/MD/LG para adulto y YSM/YMD/YLG para juvenil.",
       "source": "https://www.underarmour.com/en-us/t/size-guide/mens-gloves/",
       "sections": [
         {
@@ -277,14 +277,78 @@
       ]
     },
     "Louisville": {
-      "note": "Louisville Slugger comercializa guantines de bateo en versiones Adult y Youth, pero no publica una tabla numérica universal equivalente a Franklin, Nike o Under Armour para toda la línea Genuine 2.0.",
-      "source": "https://www.slugger.com/en-us/fastpitch/batting-gloves",
+      "note": "Louisville Slugger · TPX Pro. Mide desde la base de la palma hasta la punta del dedo medio.",
+      "source": "https://www.hq4sports.com/louisville-slugger-bg26y-tpx-pro-youth-batting-gloves.html",
       "sections": [
         {
-          "title": "Guía por modelo",
-          "note": "Para Louisville mostraremos la nomenclatura exacta del producto (por ejemplo Youth L) y, cuando el fabricante publique una guía específica para ese modelo, se añadirá aquí. No convertimos una talla Louisville usando la tabla de otra marca.",
-          "columns": [],
-          "rows": []
+          "title": "TPX Pro – Adulto",
+          "columns": [
+            "Talla",
+            "Longitud (pulg.)",
+            "Longitud aprox. (cm)"
+          ],
+          "rows": [
+            [
+              "XS",
+              "6.75–7",
+              "17.1–17.8"
+            ],
+            [
+              "S",
+              "7–7.25",
+              "17.8–18.4"
+            ],
+            [
+              "M",
+              "7.25–7.5",
+              "18.4–19.1"
+            ],
+            [
+              "L",
+              "7.5–7.75",
+              "19.1–19.7"
+            ],
+            [
+              "XL",
+              "7.75–8",
+              "19.7–20.3"
+            ],
+            [
+              "XXL",
+              "8–8.25",
+              "20.3–21.0"
+            ]
+          ]
+        },
+        {
+          "title": "TPX Pro – Juvenil (Youth)",
+          "columns": [
+            "Talla",
+            "Longitud (pulg.)",
+            "Longitud aprox. (cm)"
+          ],
+          "rows": [
+            [
+              "XS",
+              "6–6.25",
+              "15.2–15.9"
+            ],
+            [
+              "S",
+              "6.25–6.5",
+              "15.9–16.5"
+            ],
+            [
+              "M",
+              "6.5–6.75",
+              "16.5–17.1"
+            ],
+            [
+              "L",
+              "6.75–7",
+              "17.1–17.8"
+            ]
+          ]
         }
       ]
     }

@@ -1005,6 +1005,10 @@ img {
   background:#fff
 }
 
+.size-table-compact {
+  min-width:0
+}
+
 .size-table th,.size-table td {
   text-align:left;
   padding:10px;
@@ -1012,18 +1016,10 @@ img {
   font-size:13px
 }
 
-.size-table th {
+.size-table thead th {
   background:#f8fafc
 }
 
-.guide-note {
-  background:#fff7ed;
-  border:1px solid #fed7aa;
-  border-radius:12px;
-  padding:12px;
-  color:#9a3412;
-  font-size:13px
-}
 
 .measure-steps {
   display:grid;
