@@ -37,14 +37,15 @@ def main():
    def __init__(self,*args,**kwargs):super().__init__(*args,directory=str(panel_dir),**kwargs)
    def log_message(self,*args):pass
   panel_server=Server(('127.0.0.1',0),PanelHandler);panel_thread=threading.Thread(target=panel_server.serve_forever,daemon=True);panel_thread.start();panel_origin=f'http://127.0.0.1:{panel_server.server_port}'
-  state={'mode':'ok','price':29.99,'available':True,'calls':0}
+  state={'mode':'ok','price':29.99,'available':True,'calls':0,'limit':99}
   def route_rpc(route):
    state['calls']+=1;name=route.request.url.rsplit('/',1)[-1];args=route.request.post_data_json or {};data=None
    if state['mode']=='error':route.fulfill(status=503,json={'message':'offline'},headers={'Access-Control-Allow-Origin':'*'});return
    if name=='get_public_catalog':data={'categories':[],'products':[]} if state['mode']=='empty' else CATALOG
-   elif name=='get_public_product':data=next((p for p in PRODUCTS if p['slug']==args['p_slug']),None)
+   elif name=='get_public_product':
+    found=next((p for p in PRODUCTS if p['slug']==args['p_slug']),None);data={**found,'maxQuantity':state['limit']} if found else None
    elif name=='get_related_products':data=[p for p in PRODUCTS if p['id']!=args['p_product_id']]
-   elif name=='get_public_cart_state':data=[dict(variantId=uuid(20),slug=ITEM['slug'],name=ITEM['name'],available=state['available'],price=state['price'],options=ITEM['options'],imagePath=ITEM['image'])] if uuid(20) in args['p_variant_ids'] else []
+   elif name=='get_public_cart_state':data=[dict(variantId=uuid(20),productId=PRODUCTS[0]['id'],maxQuantity=state['limit'],slug=ITEM['slug'],name=ITEM['name'],available=state['available'],price=state['price'],options=ITEM['options'],imagePath=ITEM['image'])] if uuid(20) in args['p_variant_ids'] else []
    route.fulfill(json=data,headers={'Access-Control-Allow-Origin':'*'})
   def inspect(page,label):
    result=page.evaluate('''()=>{const visible=e=>!!(e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden'&&e.closest('[aria-hidden="true"]')===null);return {
@@ -90,6 +91,20 @@ def main():
      check(f'{width} Louisville modelo identificado','TPX Pro' in page.locator('#guideContent').inner_text() and page.locator('.size-table tbody tr').count()==10)
      shot(page,width,'tallas-louisville')
     context.close()
+    context=browser.new_context();context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page()
+    page.goto(origin+'/producto/guante-franklin/');page.wait_for_selector('#productQuantity')
+    page.locator('#productQuantity').fill('3');page.locator('#addOrder').click();page.wait_for_selector('.cart-item')
+    page.wait_for_timeout(150);check('Ficha agrega tres unidades',page.evaluate('BattingCart.read()[0].qty')==3)
+    check('WhatsApp incluye tres unidades','%C3%97%203' in page.locator('#cartWhatsapp').get_attribute('href'))
+    check('Cursor de bate fuera de campos','bat-cursor.svg' in page.locator('#productName').evaluate('(e)=>getComputedStyle(e).cursor'))
+    check('Cursor de escritura solo en campo',page.locator('#productQuantity').evaluate('(e)=>getComputedStyle(e).cursor')=='text')
+    state['limit']=1;context.close();context=browser.new_context();context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page()
+    page.goto(origin+'/producto/guante-franklin/');page.wait_for_selector('#productQuantity');check('Producto de una unidad bloquea +',page.locator('#quantityPlus').is_disabled())
+    page.locator('#productQuantity').fill('9');page.locator('#addOrder').click();page.wait_for_selector('.cart-item');page.wait_for_timeout(150)
+    check('Limite de una unidad en ficha y carrito',page.evaluate('BattingCart.read()[0].qty')==1 and page.locator('.qty-control button').last.is_disabled())
+    count=page.evaluate("()=>{const one=BattingCart.read()[0];BattingCart.write([one,{...one,variantId:'00000000-0000-4000-8000-000000000099'}]);return BattingCart.read().reduce((n,i)=>n+i.qty,0)}")
+    check('Limite se comparte entre variantes del producto',count==1)
+    state['limit']=99;context.close()
     # Estados y tiempos del loader sin tocar dependencias ni fuentes.
     context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/');page.wait_for_selector('.product-card')
     page.evaluate('''()=>{window.loaderStart=performance.now();window.loaderPromise=BattingUI.withLoader(new Promise(r=>setTimeout(r,500)));}''');page.wait_for_timeout(200);check('Loader oculto antes de 350ms',not page.locator('#globalLoader').is_visible());page.wait_for_timeout(180);check('Loader visible y logo',page.locator('#globalLoader').is_visible() and page.locator('.loader-logo').is_visible());ball=page.locator('.softball-track img').evaluate('(e)=>parseFloat(getComputedStyle(e).width)');check('Pelota 56px',ball==56);page.wait_for_timeout(400);check('Loader minimo 400ms',page.locator('#globalLoader').is_visible());page.wait_for_timeout(200);check('Loader termina',not page.locator('#globalLoader').is_visible())

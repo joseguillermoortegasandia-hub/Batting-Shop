@@ -194,3 +194,11 @@ browser_smoke intercepta las cuatro RPC con datos de prueba y genera 24 capturas
 Las pruebas del Worker usan un adaptador local de HTMLRewriter y caché. Un GET local del contrato da 200 con title y og:title; falta comprobarlo en Cloudflare real. No se probó Supabase Auth/Storage/RLS remoto, distribución edge de caché, previews reales de WhatsApp/Facebook ni los navegadores de iPhone/Instagram. El flujo elimina window.open asíncrono y conserva wa.me, pero la confirmación en esos dispositivos requiere pruebas reales.
 
 Fuentes: [Routing de Pages](https://developers.cloudflare.com/pages/functions/routing/), [headers estáticos](https://developers.cloudflare.com/pages/configuration/headers/), [buckets públicos de Supabase](https://supabase.com/docs/guides/storage/buckets/fundamentals), [políticas de Storage](https://supabase.com/docs/guides/storage/security/access-control).
+
+## Editor único y cantidades
+
+El panel reúne información, colores/tallas, stock, fotos y vista previa en un solo formulario. Publicar producto guarda las imágenes preparadas y publica al terminar; no hay selector de estado ni botón de borrador. La importación CSV conserva su revisión independiente.
+
+Cada producto permite una unidad o varias (hasta 99) por pedido. La ficha y el carrito comparten el límite entre variantes. Aplicar `20261104141323_product_order_quantity.sql` después de las migraciones anteriores; su rollback está en `private/supabase/rollback/`. No agrega productos. Detalles y límites de la prueba en `private/docs/UNIFIED_PRODUCT_EDITOR.md`.
+
+El cursor de bate se comparte entre tienda y panel; el cursor de texto se reserva para los campos editables.

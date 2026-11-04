@@ -1760,3 +1760,14 @@ button{min-width:40px}
 .thumb{min-width:44px;min-height:44px}
 .cart-whatsapp{white-space:normal;min-width:0;text-align:center}
 [hidden]{display:none!important}
+
+/* Cursor de bate y texto editable únicamente en campos de entrada. */
+html,body,body * {cursor:url('/assets/icons/bat-cursor.svg') 3 3,default !important;caret-color:transparent}
+body {-webkit-user-select:none;user-select:none}
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([disabled]):not([readonly]),textarea:not([disabled]):not([readonly]),[contenteditable="true"],[contenteditable="true"] * {cursor:text !important;caret-color:auto;-webkit-user-select:text;user-select:text}
+
+.product-quantity {display:grid;gap:8px;margin:18px 0}
+.product-quantity label {font-weight:700}
+.product-quantity .qty-control {width:max-content}
+.product-quantity input {width:64px;min-height:44px;text-align:center;border:0;background:transparent;font:inherit;color:inherit}
+.product-quantity small {font-size:12px;color:var(--muted)}

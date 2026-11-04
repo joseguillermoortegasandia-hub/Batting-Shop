@@ -20,7 +20,7 @@ def main():
   user_id='10000000-0000-4000-8000-000000000001';category_id='20000000-0000-4000-8000-000000000001'
   factor={'id':'factor-test','factor_type':'totp','status':'verified','friendly_name':'Test'}
   user={'id':user_id,'email':'owner@example.invalid','role':'authenticated','aud':'authenticated','factors':[factor],'app_metadata':{'provider':'email'},'user_metadata':{}}
-  category={'id':category_id,'slug':'accesorios','name':'Accesorios','is_active':True,'show_on_home':True,'variant_mode':'single','sort_order':1}
+  category={'id':category_id,'slug':'accesorios','name':'Accesorios','is_active':True,'show_on_home':True,'variant_mode':'color_only','sort_order':1}
   def jwt(aal):
    encode=lambda o:base64.urlsafe_b64encode(json.dumps(o).encode()).decode().rstrip('=')
    return encode({'alg':'HS256','typ':'JWT'})+'.'+encode({'sub':user_id,'aud':'authenticated','role':'authenticated','aal':aal,'email':user['email'],'exp':int(time.time())+3600,'iat':int(time.time()),'session_id':str(uuid.uuid4())})+'.'+'a'*43
@@ -32,12 +32,15 @@ def main():
      db={'products':[],'product_variants':[],'inventory_private':[]};errors=[];requests=[]
      def api(route):
       request=route.request;url=urlparse(request.url);path=url.path;method=request.method;requests.append((method,path))
-      data=request.post_data_json if request.post_data else None
+      data=request.post_data_json if 'application/json' in request.headers.get('content-type','') and method in ['POST','PATCH'] else None
       if path=='/auth/v1/token':body={'access_token':jwt(aal),'refresh_token':'test-refresh-token','expires_in':3600,'token_type':'bearer','user':user}
       elif path=='/auth/v1/user':body=user
       elif path=='/auth/v1/factors':body={'all':[factor],'totp':[factor],'phone':[]}
       elif path=='/auth/v1/logout':body={}
       elif path=='/rest/v1/rpc/is_admin':body=authorized
+      elif path.startswith('/storage/v1/object/'):
+       if method=='GET':route.fulfill(body=(Path(td)/'test-photo.png').read_bytes(),content_type='image/png');return
+       assert method=='POST';body={'Key':path.rsplit('/',1)[-1]}
       elif path.startswith('/rest/v1/'):
        table=path.rsplit('/',1)[-1]
        if table=='admin_users':rows=[{'user_id':user_id,'role':'owner'}] if authorized else []
@@ -49,6 +52,11 @@ def main():
          row.setdefault('id',str(uuid.uuid4()));row.setdefault('created_at','2026-11-03T00:00:00Z');row.setdefault('updated_at',row['created_at'])
          if table=='product_variants':row.setdefault('available',False)
         db.setdefault(table,[]).extend(rows)
+       elif method=='PATCH':
+        from urllib.parse import parse_qs
+        row_id=parse_qs(url.query).get('id',[''])[0].removeprefix('eq.')
+        rows=[row for row in rows if row.get('id')==row_id]
+        for row in rows:row.update(data)
        elif method not in ['GET','HEAD']:raise AssertionError('Petición de escritura inesperada: '+method+' '+path)
        body=rows[0] if 'application/vnd.pgrst.object+json' in request.headers.get('accept','') and rows else rows
       else:raise AssertionError('Endpoint inesperado '+path)
@@ -64,14 +72,36 @@ def main():
        assert not any(path.startswith('/auth/v1/factors') for method,path in requests)
       except Exception:print('DIAGNOSTICO',requests,errors,page.locator('body').inner_text(),flush=True);raise
       page.get_by_role('button',name='+ Nuevo producto',exact=True).click();page.wait_for_selector('#productEditor[open]')
-      page.locator('#saveDraft').click();page.wait_for_selector('.admin-toast.error');assert not db['products'];assert not errors,errors
+      page.locator('#savePublish').click();page.wait_for_selector('.admin-toast.error');assert not db['products'];assert not errors,errors
       print('PASS formulario incompleto muestra error y no escribe productos',flush=True)
       page.locator('#fName').fill('Producto de prueba local');page.locator('#fBrand').fill('Marca de prueba');page.locator('#fPrice').fill('12.50');page.locator('#fDescription').fill('Solo fixture local, nunca se envía a la base real.')
-      page.locator('#saveDraft').click();page.wait_for_selector('#productEditor',state='hidden')
-      assert len(db['products'])==1 and db['products'][0]['status']=='draft';assert len(db['product_variants'])==1 and len(db['inventory_private'])==1
-      assert page.locator('#metricDrafts').inner_text()=='1';assert not errors,errors
+      assert page.locator('.editor-tabs, #fStatus, #saveDraft').count()==0
+      assert page.locator('#imageFiles').is_visible()
+      page.locator('#fMaxQuantity').select_option('1')
+      page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Color interno')).locator('input').fill('Negro')
+      page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Stock')).locator('input').fill('2')
+      from PIL import Image
+      photo=Path(td)/'test-photo.png';Image.new('RGB',(1000,1000),'navy').save(photo)
+      page.locator('#imageFiles').set_input_files(str(photo));page.locator('#uploadImages').click();page.wait_for_selector('.image-item')
+      assert not db['products'] and not any(path.startswith('/storage/') for method,path in requests)
+      assert page.locator('#editorPreview img').get_attribute('src').startswith('blob:')
+      assert 'bat-cursor.svg' in page.locator('#editorTitle').evaluate('(e)=>getComputedStyle(e).cursor')
+      assert page.locator('#fName').evaluate('(e)=>getComputedStyle(e).cursor')=='text'
+      for width in [320,390,768,1366]:
+       page.set_viewport_size({'width':width,'height':900})
+       assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+       page.locator('#productEditor').evaluate('(e)=>e.scrollTop=0')
+       assert page.locator('#productEditor').evaluate('(e)=>e.scrollWidth<=e.clientWidth+1')
+       page.screenshot(path=str(ROOT/f'artifacts/panel-editor-unified-{width}.png'),full_page=True)
+      page.locator('#savePublish').click()
+      try:page.wait_for_selector('#productEditor',state='hidden',timeout=10000)
+      except Exception:print('SAVE DIAGNOSTICO',page.locator('#adminToastRegion').inner_text(),requests,errors,db,flush=True);raise
+      assert len(db['products'])==1 and db['products'][0]['status']=='published' and db['products'][0]['max_order_quantity']==1;assert len(db['product_variants'])==1 and len(db['inventory_private'])==1
+      assert len(db['product_images'])==1 and len(db['product_colors'])==1
+      assert sum(method=='POST' and path.startswith('/storage/') for method,path in requests)==3
+      assert page.locator('#metricPublished').inner_text()=='1';assert not errors,errors
       page.screenshot(path=str(ROOT/'artifacts/panel-dashboard-test.png'),full_page=True)
-      print('PASS login con contraseña AAL1, formulario de producto, variante, inventario y borrador (API simulada)',flush=True)
+      print('PASS login con contraseña AAL1, formulario único, color, fotos, cantidad, inventario y publicación (API simulada)',flush=True)
      context.close()
     browser.close()
   finally:server.shutdown();server.server_close();thread.join()
