@@ -122,3 +122,26 @@ union all
 select 'category',c.name,a.slug,c.slug,a.created_at
 from public.category_slug_aliases a join public.categories c on c.id=a.category_id
 order by created_at desc;
+
+-- 12) Debe ser true en todas las tablas protegidas; no desactiva FORCE RLS.
+select relname,relrowsecurity,relforcerowsecurity from pg_class
+where oid in ('public.products'::regclass,'public.product_variants'::regclass,
+ 'public.inventory_private'::regclass,'public.product_slug_aliases'::regclass,'public.audit_log'::regclass);
+-- Ejecutar como postgres, en una sesión de auditoría independiente.
+begin;
+set local role anon;
+select public.get_public_catalog() as anon_catalog_with_force_rls;
+do $$ declare t text; begin
+ foreach t in array array['products','product_variants','inventory_private','product_slug_aliases','audit_log'] loop
+  begin
+   execute format('select 1 from public.%I limit 1',t);
+   raise exception 'FALLO: anon tiene SELECT directo sobre %',t;
+  exception when insufficient_privilege then
+   raise notice 'OK: anon no puede leer %',t;
+  end;
+ end loop;
+end $$;
+rollback;
+-- 13) Inspeccionar políticas permisivas adicionales que puedan permitir listar.
+select policyname,roles,cmd,qual,with_check from pg_policies
+where schemaname='storage' and tablename='objects' order by policyname;
