@@ -41,6 +41,10 @@ El Worker protege todos los archivos, incluidas imágenes, configuración y SDK.
 
 Cloudflare Access es una puerta adicional. El panel conserva su login Supabase, comprobación de admin_users, MFA y RLS. Tener la URL, el HTML o la clave publicable no concede permiso para editar inventario. Falta crear el primer usuario administrador con el correo que indique el propietario y configurar Auth/Access reales. La separación no convierte una cuenta normal de Supabase en administrador.
 
+Para el primer acceso: crear el usuario de la tienda en Authentication → Users del proyecto Supabase, con una contraseña definida por el propietario. Esto no requiere crear otra cuenta del servicio Supabase ni compartir la contraseña con el asistente. Una vez creado y verificado, se añade su UUID a public.admin_users con role owner mediante una operación autorizada de administración. El panel pide configurar/verificar MFA antes de habilitar edición de productos. No escribir hashes de contraseñas ni crear identidades directamente mediante SQL.
+
+`pnpm run test:panel` prueba login, bloqueo por MFA, validación de un formulario vacío y guardado de producto/variante/inventario como borrador con una API simulada. No crea productos ni usuarios en el proyecto real. Los errores de guardar se muestran como avisos y el botón se bloquea mientras termina la operación para evitar duplicados.
+
 ## Verificación
 
 `pnpm run verify` incluye builds separados, ausencia de recursos privados en tienda, nueve rutas con 404 y pruebas criptográficas del Worker con tokens reales generados localmente (válidos/falsificados/expirados, emisor/audiencia/correo incorrectos). `pnpm run test:browser` abre tienda y panel en dos orígenes, comprueba almacenamiento separado, pantalla de login y enlace Ver tienda, además del smoke de diseño y procesamiento de fotos. Todas estas pruebas usan fixtures locales, sin escribir productos en Supabase.

@@ -9,6 +9,7 @@
     "preview": "python -m http.server 8080 --bind 127.0.0.1 --directory dist",
     "verify": "python private/tests/verify.py",
     "test:browser": "python private/tests/browser_smoke.py",
+    "test:panel": "python private/tests/admin_workflow_test.py",
     "preinstall": "node private/scripts/check-package-manager.mjs",
     "build:panel": "node build-panel.mjs",
     "build:panel:local": "node --env-file=.env.local build-panel.mjs",
