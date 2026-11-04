@@ -22,7 +22,7 @@ Esta entrega es **acumulativa**: contiene Etapa 1 + Etapa 2 + Etapa 3.
 
 ### Admin
 
-- Auth Supabase + MFA/AAL2 + RLS.
+- Auth Supabase (correo y contraseña) + permisos admin + RLS.
 - Productos, inventario, imágenes, categorías, atributos, auditoría, edición masiva e importación CSV.
 - Crear categorías sin tocar código.
 - Pelotas permanece sembrada **inactiva** hasta que el dueño decida activarla.
@@ -119,7 +119,7 @@ El build del panel copia `@supabase/supabase-js@2.117.2` a su propia salida dist
 
 - Sin login para clientes.
 - Storefront: fetch a cuatro RPC públicas, apikey pública, timeout de 4 s y un reintento; no carga supabase-js ni sesiones.
-- Admin: Auth + MFA/AAL2 + RLS.
+- Admin: Auth (correo y contraseña) + permisos admin + RLS.
 - Cloudflare Access sobre todo el hostname del panel separado, con validación del JWT en su Worker.
 - CSP estricta sin `unsafe-inline` en estilos.
 - Sin `innerHTML` con datos de Supabase.

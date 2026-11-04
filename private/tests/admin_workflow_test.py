@@ -1,4 +1,4 @@
-"""Acceso MFA y guardado en panel con API simulada: no escribe en Supabase."""
+"""Acceso con contraseña y guardado en panel con API simulada: no escribe en Supabase."""
 from pathlib import Path
 from http.server import ThreadingHTTPServer,SimpleHTTPRequestHandler
 from urllib.parse import urlparse
@@ -27,7 +27,8 @@ def main():
   try:
    with sync_playwright() as pw:
     browser=pw.chromium.launch(channel='chrome')
-    for aal in ['aal1','aal2']:
+    for authorized in [False,True]:
+     aal='aal1'
      db={'products':[],'product_variants':[],'inventory_private':[]};errors=[];requests=[]
      def api(route):
       request=route.request;url=urlparse(request.url);path=url.path;method=request.method;requests.append((method,path))
@@ -36,9 +37,10 @@ def main():
       elif path=='/auth/v1/user':body=user
       elif path=='/auth/v1/factors':body={'all':[factor],'totp':[factor],'phone':[]}
       elif path=='/auth/v1/logout':body={}
+      elif path=='/rest/v1/rpc/is_admin':body=authorized
       elif path.startswith('/rest/v1/'):
        table=path.rsplit('/',1)[-1]
-       if table=='admin_users':rows=[{'user_id':user_id,'role':'owner'}]
+       if table=='admin_users':rows=[{'user_id':user_id,'role':'owner'}] if authorized else []
        elif table=='categories':rows=[category]
        else:rows=db.get(table,[])
        if method=='POST':
@@ -53,10 +55,13 @@ def main():
       route.fulfill(json=body,headers={'Access-Control-Allow-Origin':'*'})
      context=browser.new_context(viewport={'width':1366,'height':900});context.route('https://mock.supabase.co/**',api);page=context.new_page();page.on('pageerror',lambda e:errors.append(str(e)))
      page.goto(origin);page.locator('#adminEmail').fill(user['email']);page.locator('#adminPassword').fill('Test-only-password-123!');page.locator('#signInBtn').click()
-     if aal=='aal1':
-      page.wait_for_selector('#mfaChallengePanel',state='visible');assert not page.locator('#adminApp').is_visible();print('PASS MFA requerido antes de entrar al panel',flush=True)
+     if not authorized:
+      page.wait_for_selector('#loginError',state='visible');assert not page.locator('#adminApp').is_visible();print('PASS cuenta sin permiso rechazada',flush=True)
      else:
-      try:page.wait_for_selector('#adminApp',state='visible')
+      try:
+       page.wait_for_selector('#adminApp',state='visible')
+       assert page.locator('#mfaEnrollPanel, #mfaChallengePanel').count()==0
+       assert not any(path.startswith('/auth/v1/factors') for method,path in requests)
       except Exception:print('DIAGNOSTICO',requests,errors,page.locator('body').inner_text(),flush=True);raise
       page.get_by_role('button',name='+ Nuevo producto',exact=True).click();page.wait_for_selector('#productEditor[open]')
       page.locator('#saveDraft').click();page.wait_for_selector('.admin-toast.error');assert not db['products'];assert not errors,errors
@@ -66,7 +71,7 @@ def main():
       assert len(db['products'])==1 and db['products'][0]['status']=='draft';assert len(db['product_variants'])==1 and len(db['inventory_private'])==1
       assert page.locator('#metricDrafts').inner_text()=='1';assert not errors,errors
       page.screenshot(path=str(ROOT/'artifacts/panel-dashboard-test.png'),full_page=True)
-      print('PASS login MFA AAL2, formulario de producto, variante, inventario y borrador (API simulada)',flush=True)
+      print('PASS login con contraseña AAL1, formulario de producto, variante, inventario y borrador (API simulada)',flush=True)
      context.close()
     browser.close()
   finally:server.shutdown();server.server_close();thread.join()

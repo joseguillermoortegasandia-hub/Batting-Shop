@@ -50,7 +50,6 @@
 
   function wireStatic(){
     $('#signInBtn')?.addEventListener('click',signIn);$('#signOutBtn')?.addEventListener('click',()=>sb?.auth.signOut());
-    $('#startEnrollBtn')?.addEventListener('click',startEnroll);$('#verifyEnrollBtn')?.addEventListener('click',verifyEnroll);$('#verifyMfaBtn')?.addEventListener('click',verifyMfa);
     $('#adminMenuBtn')?.addEventListener('click',toggleAdminNav);$('#adminBackdrop')?.addEventListener('click',closeAdminNav);
     $$('[data-view]').forEach(b=>b.addEventListener('click',()=>{switchView(b.dataset.view);closeAdminNav()}));
     $$('[data-action="new-product"]').forEach(b=>b.addEventListener('click',()=>openEditor(null)));
@@ -82,15 +81,13 @@
     finally{$('#signInBtn').disabled=false}
   }
   async function continueAuth(){
-    if(!session)return showLogin();show('#loginPanel',false);show('#mfaEnrollPanel',false);show('#mfaChallengePanel',false);show('#loginError',false);
+    if(!session)return showLogin();show('#loginPanel',false);show('#loginError',false);
     const {data:admin,error}=await sb.from('admin_users').select('user_id,role').eq('user_id',session.user.id).maybeSingle();if(error||!admin){await sb.auth.signOut();showLogin();show('#loginError');setText('#loginError','Esta cuenta no está autorizada para administrar Batting Shop.');return}
-    const [{data:factors,error:fe},{data:aal,error:ae}]=await Promise.all([sb.auth.mfa.listFactors(),sb.auth.mfa.getAuthenticatorAssuranceLevel()]);if(fe||ae){show('#loginError');setText('#loginError',(fe||ae).message);return}
-    const verified=(factors?.totp||[]).filter(f=>f.status==='verified');if(!verified.length){show('#mfaEnrollPanel');return}if(aal.currentLevel!=='aal2'){window._battingFactorId=verified[0].id;show('#mfaChallengePanel');return}await enterAdmin();
+    const {data:allowed,error:permissionError}=await sb.rpc('is_admin');
+    if(permissionError||!allowed){await sb.auth.signOut();showLogin();show('#loginError');setText('#loginError','Esta cuenta no tiene acceso al panel con esta sesión.');return}
+    await enterAdmin();
   }
-  function showLogin(){show('#authGate');show('#loginPanel');show('#mfaEnrollPanel',false);show('#mfaChallengePanel',false);show('#adminApp',false)}
-  async function startEnroll(){const {data,error}=await sb.auth.mfa.enroll({factorType:'totp',friendlyName:'Batting Shop Admin'});if(error)return notify(error.message,{kind:'error'});window._battingEnrollId=data.id;$('#mfaQr').src=data.totp.qr_code;show('#enrollDetails')}
-  async function verifyEnroll(){const factorId=window._battingEnrollId,code=$('#mfaEnrollCode').value.trim();if(!factorId||!/^[0-9]{6}$/.test(code))return notify('Escribe el código de 6 dígitos.',{kind:'error'});const {data:ch,error:ce}=await sb.auth.mfa.challenge({factorId});if(ce)return notify(ce.message,{kind:'error'});const {error}=await sb.auth.mfa.verify({factorId,challengeId:ch.id,code});if(error)return notify(error.message,{kind:'error'});await continueAuth()}
-  async function verifyMfa(){const factorId=window._battingFactorId,code=$('#mfaCode').value.trim();if(!factorId||!/^[0-9]{6}$/.test(code))return notify('Escribe el código de 6 dígitos.',{kind:'error'});const {data:ch,error:ce}=await sb.auth.mfa.challenge({factorId});if(ce)return notify(ce.message,{kind:'error'});const {error}=await sb.auth.mfa.verify({factorId,challengeId:ch.id,code});if(error)return notify(error.message,{kind:'error'});const {data}=await sb.auth.getSession();session=data.session;touch();await continueAuth()}
+  function showLogin(){show('#authGate');show('#loginPanel');show('#adminApp',false)}
   async function enterAdmin(){show('#authGate',false);show('#adminApp');setText('#adminIdentity',session.user.email||session.user.id);await withLoader(refreshAll()).catch(e=>notify(e.message,{kind:'error',timeout:7000}))}
 
   function toggleAdminNav(){const nav=$('#adminSidebar'),back=$('#adminBackdrop'),open=!nav.classList.contains('open');nav.classList.toggle('open',open);back.classList.toggle('open',open);$('#adminMenuBtn').setAttribute('aria-expanded',String(open))}

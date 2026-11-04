@@ -406,14 +406,24 @@ do $$ begin
   for each row execute function public.prevent_category_delete_with_products();
 end $$;
 
--- ---------- Administración / MFA ----------
+-- ---------- Administración / cuentas autorizadas ----------
 create or replace function public.is_authorized_admin()
 returns boolean language sql stable security definer set search_path='' as $$
   select exists(select 1 from public.admin_users a where a.user_id=(select auth.uid()));
 $$;
+-- Solo la cuenta propietaria autorizada puede acceder sin 2FA.
+-- Las demás cuentas administradoras conservan el requisito AAL2.
 create or replace function public.is_admin()
 returns boolean language sql stable security definer set search_path='' as $$
-  select public.is_authorized_admin() and coalesce((select auth.jwt()->>'aal'),'aal1')='aal2';
+  select public.is_authorized_admin() and (
+    coalesce((select auth.jwt()->>'aal'),'aal1')='aal2'
+    or exists (
+      select 1 from public.admin_users a join auth.users u on u.id=a.user_id
+      where a.user_id=(select auth.uid()) and a.role='owner'
+        and lower(u.email)='battingshop.ve@gmail.com'
+        and u.email_confirmed_at is not null
+    )
+  );
 $$;
 revoke all on function public.is_authorized_admin() from public;
 revoke all on function public.is_admin() from public;
