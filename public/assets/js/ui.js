@@ -82,9 +82,11 @@
       if(event.key===' '){event.preventDefault();link.click()}
     });
     link.append(el('div',{class:'card-image'},el('img',{
-      src:image.url,
+      src:image.thumbnailUrl||image.url,
+      width:image.width||1000,height:image.height||1000,
       alt:image.alt||product.name,
-      loading:'lazy',
+      loading:document.querySelector('.product-card')?'lazy':'eager',
+      fetchpriority:document.querySelector('.product-card')?'auto':'high',
       decoding:'async'
     })));
     const body=el('div',{class:'card-body'});
