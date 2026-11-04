@@ -1478,7 +1478,7 @@ html,body {
   width:56px;
   height:56px;
   border-radius:50%;
-  background:var(--green);
+  background:#25d366;
   display:grid;
   place-items:center;
   z-index:70;
