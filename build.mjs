@@ -1,3 +1,4 @@
+import {fingerprintAssets} from './private/scripts/fingerprint-assets.mjs';
 import {cp,rm,mkdir,readFile,writeFile,readdir,stat} from 'node:fs/promises';
 import {join,extname,basename} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -77,3 +78,5 @@ const forbiddenBasenames=new Set(['private-seed.csv','seed.sql','schema.sql','TE
 if(deployed.some(file=>/\/(?:admin|panel)\//i.test(file.slice(output.length).replaceAll('\\','/'))))fail('Archivos privados fuera de su salida separada.');
 for(const file of deployed){if(!textExts.has(extname(file).toLowerCase())&&basename(file)!=='_headers'&&basename(file)!=='_worker.js')continue;const content=await readFile(file,'utf8');if(/(?:\badmin\b|supabase-js|createClient|admin_users)/i.test(content))fail('Referencia privada en la salida pública: '+file);if(/__(SITE_URL|SUPABASE_URL|SUPABASE_ANON_KEY)__/.test(content))fail(`placeholder sin reemplazar en ${file}`);if(/https:\/\/battingshop\.ve(?:\/|\b)/i.test(content))fail(`dominio hardcodeado en ${file}`);if(/\sstyle\s*=\s*["']/i.test(content))fail(`CSP estricta: todavía existe style= inline en ${file}`);if(/cdn\.jsdelivr\.net/i.test(content))fail(`dependencia CDN detectada en ${file}`)}
 console.log(`Batting Shop V4 Final listo en dist/ para ${siteUrl}`);console.log(`Rama: ${cfBranch||'local'} · producción: ${isProduction?'sí':'no'} · noindex: ${noindex?'sí':'no'}`);console.log('La salida pública contiene únicamente la tienda.');
+
+await fingerprintAssets(output);

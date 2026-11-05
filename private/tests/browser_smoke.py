@@ -54,6 +54,7 @@ def main():
      smallText:[...document.querySelectorAll('body *')].filter(visible).filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&parseFloat(getComputedStyle(e).fontSize)<12).map(e=>e.outerHTML.slice(0,100)),
      favorites:[...document.querySelectorAll('.card-favorite')].filter(visible).map(e=>e.getBoundingClientRect().width)
    }}''')
+   check(label+' cursor cargado','bat-cursor-v2.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor'))
    check(label+' sin overflow',not result['overflow'])
    check(label+' tactiles >=40',not result['smallButtons'],str(result['smallButtons']))
    check(label+' texto >=12',not result['smallText'],str(result['smallText']))
@@ -96,7 +97,7 @@ def main():
     page.locator('#productQuantity').fill('3');page.locator('#addOrder').click();page.wait_for_selector('.cart-item')
     page.wait_for_timeout(150);check('Ficha agrega tres unidades',page.evaluate('BattingCart.read()[0].qty')==3)
     check('WhatsApp incluye tres unidades','%C3%97%203' in page.locator('#cartWhatsapp').get_attribute('href'))
-    check('Cursor de bate fuera de campos','bat-cursor.svg' in page.locator('#productName').evaluate('(e)=>getComputedStyle(e).cursor'))
+    check('Cursor de bate fuera de campos','bat-cursor-v2.png' in page.locator('#productName').evaluate('(e)=>getComputedStyle(e).cursor'))
     check('Cursor de escritura solo en campo',page.locator('#productQuantity').evaluate('(e)=>getComputedStyle(e).cursor')=='text')
     state['limit']=1;context.close();context=browser.new_context();context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page()
     page.goto(origin+'/producto/guante-franklin/');page.wait_for_selector('#productQuantity');check('Producto de una unidad bloquea +',page.locator('#quantityPlus').is_disabled())
@@ -105,6 +106,15 @@ def main():
     count=page.evaluate("()=>{const one=BattingCart.read()[0];BattingCart.write([one,{...one,variantId:'00000000-0000-4000-8000-000000000099'}]);return BattingCart.read().reduce((n,i)=>n+i.qty,0)}")
     check('Limite se comparte entre variantes del producto',count==1)
     state['limit']=99;context.close()
+    context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page()
+    for path in ['/','/catalogo.html','/favoritos.html','/tallas.html','/producto/guante-franklin/']:
+     page.goto(origin+path,wait_until='networkidle')
+     for phase in ['navegacion','recarga']:
+      if phase=='recarga':page.reload(wait_until='networkidle')
+      check(f'Cursor {phase} {path}','bat-cursor-v2.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor'))
+    cursor=page.evaluate("""async()=>{const response=await fetch('/assets/icons/bat-cursor-v2.png');const image=await createImageBitmap(await response.blob());const canvas=document.createElement('canvas');canvas.width=canvas.height=32;const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);return {ok:response.ok,width:image.width,height:image.height,corner:ctx.getImageData(0,0,1,1).data[3],middle:ctx.getImageData(16,16,1,1).data[3]}}""")
+    check('Cursor PNG 32px transparente',cursor['ok'] and cursor['width']==32 and cursor['height']==32 and cursor['corner']==0 and cursor['middle']>0)
+    context.close()
     # Estados y tiempos del loader sin tocar dependencias ni fuentes.
     context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/');page.wait_for_selector('.product-card')
     page.evaluate('''()=>{window.loaderStart=performance.now();window.loaderPromise=BattingUI.withLoader(new Promise(r=>setTimeout(r,500)));}''');page.wait_for_timeout(200);check('Loader oculto antes de 350ms',not page.locator('#globalLoader').is_visible());page.wait_for_timeout(180);check('Loader visible y logo',page.locator('#globalLoader').is_visible() and page.locator('.loader-logo').is_visible());ball=page.locator('.softball-track img').evaluate('(e)=>parseFloat(getComputedStyle(e).width)');check('Pelota 56px',ball==56);page.wait_for_timeout(400);check('Loader minimo 400ms',page.locator('#globalLoader').is_visible());page.wait_for_timeout(200);check('Loader termina',not page.locator('#globalLoader').is_visible())

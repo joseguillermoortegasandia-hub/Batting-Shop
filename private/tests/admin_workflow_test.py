@@ -58,6 +58,10 @@ def main():
         rows=[row for row in rows if row.get('id')==row_id]
         for row in rows:row.update(data)
        elif method not in ['GET','HEAD']:raise AssertionError('Petición de escritura inesperada: '+method+' '+path)
+       if method=='GET' and table=='products':
+        from urllib.parse import parse_qs
+        columns=parse_qs(url.query).get('select',['*'])[0]
+        if columns!='*':rows=[{column:row.get(column) for column in columns.split(',')} for row in rows]
        body=rows[0] if 'application/vnd.pgrst.object+json' in request.headers.get('accept','') and rows else rows
       else:raise AssertionError('Endpoint inesperado '+path)
       route.fulfill(json=body,headers={'Access-Control-Allow-Origin':'*'})
@@ -71,6 +75,8 @@ def main():
        assert page.locator('#mfaEnrollPanel, #mfaChallengePanel').count()==0
        assert not any(path.startswith('/auth/v1/factors') for method,path in requests)
       except Exception:print('DIAGNOSTICO',requests,errors,page.locator('body').inner_text(),flush=True);raise
+      page.wait_for_function("document.querySelector('#metricPublished').textContent==='0'")
+      assert page.locator('#metricValue').inner_text()=='$0.00'
       page.get_by_role('button',name='+ Nuevo producto',exact=True).click();page.wait_for_selector('#productEditor[open]')
       page.locator('#savePublish').click();page.wait_for_selector('.admin-toast.error');assert not db['products'];assert not errors,errors
       print('PASS formulario incompleto muestra error y no escribe productos',flush=True)
@@ -78,28 +84,65 @@ def main():
       assert page.locator('.editor-tabs, #fStatus, #saveDraft').count()==0
       assert page.locator('#imageFiles').is_visible()
       page.locator('#fMaxQuantity').select_option('1')
-      page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Color interno')).locator('input').fill('Negro')
+      assert page.locator('.variant-row').count()==1
+      assert page.locator('#imageColor').is_disabled() and page.locator('#uploadImages').is_disabled()
+      page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Nombre para el cliente')).locator('input').fill('Blanco')
+      assert page.locator('#imageColor').input_value()=='Blanco' and not page.locator('#imageColor').is_disabled()
+      for _ in range(3):page.locator('#addVariant').click()
+      assert page.locator('.variant-row').count()==4
+      assert page.locator('.variant-heading').all_text_contents()==['Variante 1','Variante 2','Variante 3','Variante 4']
+      for _ in range(3):page.locator('.variant-row').last.get_by_role('button',name='Eliminar',exact=True).click()
+      assert page.locator('.variant-row').count()==1 and page.locator('#imageColor').input_value()=='Blanco'
+      assert page.locator('#sessionPill').count()==0
       page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Stock')).locator('input').fill('2')
+      page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Costo USD')).locator('input').fill('5')
+      page.locator('#addVariant').click()
+      page.locator('.variant-row').last.locator('.field').filter(has=page.locator('label',has_text='Nombre para el cliente')).locator('input').fill('Blanco')
+      page.locator('#savePublish').click();page.wait_for_function("document.querySelector('#adminToastRegion').textContent.includes('repite color')")
+      assert not db['products'];page.locator('.variant-row').last.get_by_role('button',name='Eliminar',exact=True).click()
       from PIL import Image
       photo=Path(td)/'test-photo.png';Image.new('RGB',(1000,1000),'navy').save(photo)
       page.locator('#imageFiles').set_input_files(str(photo));page.locator('#uploadImages').click();page.wait_for_selector('.image-item')
       assert not db['products'] and not any(path.startswith('/storage/') for method,path in requests)
       assert page.locator('#editorPreview img').get_attribute('src').startswith('blob:')
-      assert 'bat-cursor.svg' in page.locator('#editorTitle').evaluate('(e)=>getComputedStyle(e).cursor')
+      assert 'bat-cursor-v2.png' in page.locator('#editorTitle').evaluate('(e)=>getComputedStyle(e).cursor')
       assert page.locator('#fName').evaluate('(e)=>getComputedStyle(e).cursor')=='text'
       for width in [320,390,768,1366]:
        page.set_viewport_size({'width':width,'height':900})
        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
        page.locator('#productEditor').evaluate('(e)=>e.scrollTop=0')
        assert page.locator('#productEditor').evaluate('(e)=>e.scrollWidth<=e.clientWidth+1')
+       assert page.locator('.product-editor-section').last.evaluate('(e)=>parseFloat(getComputedStyle(e).paddingLeft)')>=20
        page.screenshot(path=str(ROOT/f'artifacts/panel-editor-unified-{width}.png'),full_page=True)
+       page.locator('.product-editor-section').nth(2).evaluate("e=>{const dialog=e.closest('dialog');dialog.scrollTop+=e.getBoundingClientRect().top-dialog.getBoundingClientRect().top-dialog.querySelector('.modal-head').offsetHeight-12}")
+       page.screenshot(path=str(ROOT/f'artifacts/panel-fotos-{width}.png'),full_page=True)
       page.locator('#savePublish').click()
       try:page.wait_for_selector('#productEditor',state='hidden',timeout=10000)
       except Exception:print('SAVE DIAGNOSTICO',page.locator('#adminToastRegion').inner_text(),requests,errors,db,flush=True);raise
       assert len(db['products'])==1 and db['products'][0]['status']=='published' and db['products'][0]['max_order_quantity']==1;assert len(db['product_variants'])==1 and len(db['inventory_private'])==1
       assert len(db['product_images'])==1 and len(db['product_colors'])==1
       assert sum(method=='POST' and path.startswith('/storage/') for method,path in requests)==3
-      assert page.locator('#metricPublished').inner_text()=='1';assert not errors,errors
+      assert page.locator('#metricPublished').inner_text()=='1'
+      assert page.locator('#metricValue').inner_text()=='$10.00'
+      assert db['product_colors'][0]['name']=='Blanco'
+      page.get_by_role('button',name='Productos',exact=True).click();page.get_by_role('button',name='Editar',exact=True).click();page.wait_for_selector('#productEditor[open]')
+      assert page.locator('#fMaxQuantity').input_value()=='1';page.locator('#closeEditor').click()
+      db['inventory_private'][0]['cost']=None;page.reload();page.wait_for_function("document.querySelector('#metricValue').textContent==='Por calcular'")
+      db['products'].append({**db['products'][0],'id':str(uuid.uuid4()),'status':'draft','name':'Otro fixture local'})
+      db['inventory_private'][0].update(stock=3,cost=7)
+      page.reload();page.wait_for_selector('#adminApp',state='visible');page.wait_for_function("document.querySelector('#metricDrafts').textContent==='1'")
+      assert page.locator('#metricPublished').inner_text()=='1' and page.locator('#metricValue').inner_text()=='$21.00'
+      with page.expect_download() as download_info:
+       page.locator('#adminSidebar').get_by_role('button',name='Importar CSV',exact=True).click();page.locator('#downloadCsvTemplate').click()
+      download=download_info.value;csv=Path(download.path()).read_text(encoding='utf-8-sig')
+      assert 'code,slug,name,brand,category' in csv and 'Franklin' not in csv and 'Producto de ejemplo' not in csv
+      page.locator('#csvFile').set_input_files(str(download.path()));page.wait_for_function("document.querySelector('#csvStatus').textContent.includes('no contiene productos')")
+      assert not page.locator('#confirmImport').is_visible()
+      for view in ['Dashboard','Productos','Inventario','Categorías','Importar CSV','Historial']:
+       page.locator('#adminSidebar').get_by_role('button',name=view,exact=True).click()
+       assert 'bat-cursor-v2.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor')
+      page.reload();page.wait_for_selector('#adminApp',state='visible');assert 'bat-cursor-v2.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor')
+      assert not errors,errors
       page.screenshot(path=str(ROOT/'artifacts/panel-dashboard-test.png'),full_page=True)
       print('PASS login con contraseña AAL1, formulario único, color, fotos, cantidad, inventario y publicación (API simulada)',flush=True)
      context.close()
