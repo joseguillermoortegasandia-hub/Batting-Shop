@@ -29,7 +29,7 @@ def main():
     browser=pw.chromium.launch(channel='chrome')
     for authorized in [False,True]:
      aal='aal1'
-     db={'products':[],'product_variants':[],'inventory_private':[]};errors=[];requests=[]
+     db={'products':[],'product_variants':[],'inventory_private':[]};errors=[];requests=[];fail_publish=[True]
      def api(route):
       request=route.request;url=urlparse(request.url);path=url.path;method=request.method;requests.append((method,path))
       data=request.post_data_json if 'application/json' in request.headers.get('content-type','') and method in ['POST','PATCH'] else None
@@ -44,14 +44,22 @@ def main():
       elif path.startswith('/rest/v1/'):
        table=path.rsplit('/',1)[-1]
        if table=='admin_users':rows=[{'user_id':user_id,'role':'owner'}] if authorized else []
-       elif table=='categories':rows=[category]
+       elif table=='categories':rows=[category,{**category,'id':'20000000-0000-4000-8000-000000000002','name':'Guantines','slug':'guantines','variant_mode':'color_size'}]
        else:rows=db.get(table,[])
+       if method=='PATCH' and table=='products' and data.get('status')=='published' and fail_publish[0]:
+        fail_publish[0]=False;route.fulfill(status=503,json={'message':'Fallo simulado al publicar: vuelve a intentar.'});return
        if method=='POST':
         rows=data if isinstance(data,list) else [data]
         for row in rows:
          row.setdefault('id',str(uuid.uuid4()));row.setdefault('created_at','2026-11-03T00:00:00Z');row.setdefault('updated_at',row['created_at'])
          if table=='product_variants':row.setdefault('available',False)
-        db.setdefault(table,[]).extend(rows)
+        existing=db.setdefault(table,[])
+        from urllib.parse import parse_qs
+        keys=parse_qs(url.query).get('on_conflict',[''])[0].split(',')
+        for row in rows:
+         previous=next((old for old in existing if keys!=[''] and all(old.get(key)==row.get(key) for key in keys)),None)
+         if previous is None:existing.append(row)
+         else:previous.update(row)
        elif method=='PATCH':
         from urllib.parse import parse_qs
         row_id=parse_qs(url.query).get('id',[''])[0].removeprefix('eq.')
@@ -78,34 +86,39 @@ def main():
       page.wait_for_function("document.querySelector('#metricPublished').textContent==='0'")
       assert page.locator('#metricValue').inner_text()=='$0.00'
       page.get_by_role('button',name='+ Nuevo producto',exact=True).click();page.wait_for_selector('#productEditor[open]')
-      page.locator('#savePublish').click();page.wait_for_selector('.admin-toast.error');assert not db['products'];assert not errors,errors
+      page.locator('#savePublish').click();page.wait_for_selector('#publishFeedback',state='visible');assert page.locator('#publishFeedback').evaluate("e=>e.closest('dialog').open && e.contains(document.elementFromPoint(e.getBoundingClientRect().x+10,e.getBoundingClientRect().y+10))");assert not db['products'];assert not errors,errors
       print('PASS formulario incompleto muestra error y no escribe productos',flush=True)
       page.locator('#fName').fill('Producto de prueba local');page.locator('#fBrand').fill('Marca de prueba');page.locator('#fPrice').fill('12.50');page.locator('#fDescription').fill('Solo fixture local, nunca se envía a la base real.')
       assert page.locator('.editor-tabs, #fStatus, #saveDraft').count()==0
       assert page.locator('#imageFiles').is_visible()
       page.locator('#fMaxQuantity').select_option('1')
-      assert page.locator('.variant-row').count()==1
+      assert page.locator('.product-stock-fields').count()==1
       assert page.locator('#imageColor').is_disabled() and page.locator('#uploadImages').is_disabled()
-      page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Nombre para el cliente')).locator('input').fill('Blanco')
+      assert page.locator('#addVariant, .variant-help, .variant-heading, .variant-row').count()==0
+      labels=page.locator('#variantRows label').all_text_contents()
+      assert labels==['Color','Muestra de color','Stock','Costo USD'],labels
+      page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Color')).first.locator('input').fill('Blanco')
       assert page.locator('#imageColor').input_value()=='Blanco' and not page.locator('#imageColor').is_disabled()
-      for _ in range(3):page.locator('#addVariant').click()
-      assert page.locator('.variant-row').count()==4
-      assert page.locator('.variant-heading').all_text_contents()==['Variante 1','Variante 2','Variante 3','Variante 4']
-      for _ in range(3):page.locator('.variant-row').last.get_by_role('button',name='Eliminar',exact=True).click()
-      assert page.locator('.variant-row').count()==1 and page.locator('#imageColor').input_value()=='Blanco'
+      page.locator('#fCategory').select_option('20000000-0000-4000-8000-000000000002')
+      assert page.locator('#variantRows label',has_text='Talla').count()==1
+      page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Talla')).locator('input').fill('M')
+      page.locator('#fCategory').select_option(category_id)
+      assert page.locator('#variantRows label',has_text='Talla').count()==0
+      assert page.locator('.product-stock-fields').count()==1 and page.locator('#imageColor').input_value()=='Blanco'
       assert page.locator('#sessionPill').count()==0
       page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Stock')).locator('input').fill('2')
       page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Costo USD')).locator('input').fill('5')
-      page.locator('#addVariant').click()
-      page.locator('.variant-row').last.locator('.field').filter(has=page.locator('label',has_text='Nombre para el cliente')).locator('input').fill('Blanco')
-      page.locator('#savePublish').click();page.wait_for_function("document.querySelector('#adminToastRegion').textContent.includes('repite color')")
-      assert not db['products'];page.locator('.variant-row').last.get_by_role('button',name='Eliminar',exact=True).click()
       from PIL import Image
-      photo=Path(td)/'test-photo.png';Image.new('RGB',(1000,1000),'navy').save(photo)
+      photo=Path(td)/'test-photo.png';Image.new('RGB',(400,400),'navy').save(photo)
+      page.locator('#imageFiles').set_input_files(str(photo));page.locator('#uploadImages').click();page.wait_for_selector('.admin-toast.error')
+      assert page.locator('#adminToastRegion').evaluate("e=>e.closest('dialog').id==='productEditor'")
+      toast=page.locator('.admin-toast.error').last
+      assert toast.evaluate("e=>{const r=e.getBoundingClientRect();return e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}")
+      page.locator('#imageFiles').set_input_files([]);Image.new('RGB',(1000,1000),'navy').save(photo)
       page.locator('#imageFiles').set_input_files(str(photo));page.locator('#uploadImages').click();page.wait_for_selector('.image-item')
       assert not db['products'] and not any(path.startswith('/storage/') for method,path in requests)
       assert page.locator('#editorPreview img').get_attribute('src').startswith('blob:')
-      assert 'bat-cursor-v2.png' in page.locator('#editorTitle').evaluate('(e)=>getComputedStyle(e).cursor')
+      assert 'bat-cursor-v3.png' in page.locator('#editorTitle').evaluate('(e)=>getComputedStyle(e).cursor')
       assert page.locator('#fName').evaluate('(e)=>getComputedStyle(e).cursor')=='text'
       for width in [320,390,768,1366]:
        page.set_viewport_size({'width':width,'height':900})
@@ -116,10 +129,20 @@ def main():
        page.screenshot(path=str(ROOT/f'artifacts/panel-editor-unified-{width}.png'),full_page=True)
        page.locator('.product-editor-section').nth(2).evaluate("e=>{const dialog=e.closest('dialog');dialog.scrollTop+=e.getBoundingClientRect().top-dialog.getBoundingClientRect().top-dialog.querySelector('.modal-head').offsetHeight-12}")
        page.screenshot(path=str(ROOT/f'artifacts/panel-fotos-{width}.png'),full_page=True)
+      page.set_viewport_size({'width':320,'height':900})
+      page.locator('#savePublish').click()
+      page.wait_for_function("document.querySelector('#publishFeedback').textContent.includes('Fallo simulado')")
+      page.wait_for_selector('#adminLoader',state='hidden')
+      assert page.locator('#publishFeedback').evaluate("e=>{const r=e.getBoundingClientRect();return e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}")
+      assert len(db['products'])==1 and len(db['product_variants'])==1
+      page.screenshot(path=str(ROOT/'artifacts/panel-error-publicacion-320.png'),full_page=True)
+      page.set_viewport_size({'width':1366,'height':900})
       page.locator('#savePublish').click()
       try:page.wait_for_selector('#productEditor',state='hidden',timeout=10000)
       except Exception:print('SAVE DIAGNOSTICO',page.locator('#adminToastRegion').inner_text(),requests,errors,db,flush=True);raise
       assert len(db['products'])==1 and db['products'][0]['status']=='published' and db['products'][0]['max_order_quantity']==1;assert len(db['product_variants'])==1 and len(db['inventory_private'])==1
+      assert db['product_variants'][0]['sale_price'] is None
+      assert 'provider_sku' not in db['inventory_private'][0] and 'provider_source_url' not in db['inventory_private'][0]
       assert len(db['product_images'])==1 and len(db['product_colors'])==1
       assert sum(method=='POST' and path.startswith('/storage/') for method,path in requests)==3
       assert page.locator('#metricPublished').inner_text()=='1'
@@ -127,6 +150,20 @@ def main():
       assert db['product_colors'][0]['name']=='Blanco'
       page.get_by_role('button',name='Productos',exact=True).click();page.get_by_role('button',name='Editar',exact=True).click();page.wait_for_selector('#productEditor[open]')
       assert page.locator('#fMaxQuantity').input_value()=='1';page.locator('#closeEditor').click()
+      # Compatibilidad: las presentaciones antiguas no se borran al simplificar el editor.
+      color2={**db['product_colors'][0],'id':str(uuid.uuid4()),'name':'Negro','display_name':'Negro'}
+      variant2={**db['product_variants'][0],'id':str(uuid.uuid4()),'color_id':color2['id'],'sale_price':15}
+      db['product_colors'].append(color2);db['product_variants'].append(variant2)
+      db['inventory_private'].append({'variant_id':variant2['id'],'stock':0,'cost':None,'provider_sku':'legacy-sku','provider_source_url':'https://supplier.example/item'})
+      page.get_by_role('button',name='Editar',exact=True).click();page.wait_for_selector('#productEditor[open]')
+      assert page.locator('.product-stock-fields').count()==1 and page.locator('#savedProductOption option').count()==2
+      page.locator('#savedProductOption').select_option('1')
+      assert page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Color')).first.locator('input').input_value()=='Negro'
+      page.locator('#savePublish').click();page.wait_for_selector('#productEditor',state='hidden')
+      assert len(db['product_variants'])==2 and len(db['inventory_private'])==2
+      assert db['inventory_private'][1]['provider_sku']=='legacy-sku'
+      assert not any(method=='DELETE' for method,path in requests)
+      assert all(row['sale_price'] is None for row in db['product_variants'])
       db['inventory_private'][0]['cost']=None;page.reload();page.wait_for_function("document.querySelector('#metricValue').textContent==='Por calcular'")
       db['products'].append({**db['products'][0],'id':str(uuid.uuid4()),'status':'draft','name':'Otro fixture local'})
       db['inventory_private'][0].update(stock=3,cost=7)
@@ -135,16 +172,17 @@ def main():
       with page.expect_download() as download_info:
        page.locator('#adminSidebar').get_by_role('button',name='Importar CSV',exact=True).click();page.locator('#downloadCsvTemplate').click()
       download=download_info.value;csv=Path(download.path()).read_text(encoding='utf-8-sig')
+      assert not any(column in csv.splitlines()[0].split(',') for column in ['sale_price','provider_sku','provider_source_url'])
       assert 'code,slug,name,brand,category' in csv and 'Franklin' not in csv and 'Producto de ejemplo' not in csv
       page.locator('#csvFile').set_input_files(str(download.path()));page.wait_for_function("document.querySelector('#csvStatus').textContent.includes('no contiene productos')")
       assert not page.locator('#confirmImport').is_visible()
       for view in ['Dashboard','Productos','Inventario','Categorías','Importar CSV','Historial']:
        page.locator('#adminSidebar').get_by_role('button',name=view,exact=True).click()
-       assert 'bat-cursor-v2.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor')
-      page.reload();page.wait_for_selector('#adminApp',state='visible');assert 'bat-cursor-v2.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor')
+       assert 'bat-cursor-v3.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor')
+      page.reload();page.wait_for_selector('#adminApp',state='visible');assert 'bat-cursor-v3.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor')
       assert not errors,errors
       page.screenshot(path=str(ROOT/'artifacts/panel-dashboard-test.png'),full_page=True)
-      print('PASS login con contraseña AAL1, formulario único, color, fotos, cantidad, inventario y publicación (API simulada)',flush=True)
+      print('PASS formulario único, talla opcional, errores sobre modal (320px), reintento sin duplicados, conservación de registros antiguos, fotos y publicación (API simulada)',flush=True)
      context.close()
     browser.close()
   finally:server.shutdown();server.server_close();thread.join()

@@ -201,7 +201,7 @@ El panel reúne información, colores/tallas, stock, fotos y vista previa en un 
 
 Cada producto permite una unidad o varias (hasta 99) por pedido. La ficha y el carrito comparten el límite entre variantes. Aplicar `20261104141323_product_order_quantity.sql` después de las migraciones anteriores; su rollback está en `private/supabase/rollback/`. No agrega productos. Detalles y límites de la prueba en `private/docs/UNIFIED_PRODUCT_EDITOR.md`.
 
-El cursor de bate se comparte entre tienda y panel; el cursor de texto se reserva para los campos editables.
+El editor muestra un único bloque de color, talla opcional y stock, con precio general. Los errores de publicación permanecen visibles dentro del formulario. El cursor de bate de 40 px se comparte entre tienda y panel; el cursor de texto se reserva para los campos editables.
 
 ## Preparación final para despliegue
 

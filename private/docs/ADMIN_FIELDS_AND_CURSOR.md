@@ -1,21 +1,12 @@
 # Revisión de variantes, fotos, dashboard y cursor
 
-## Campos de cada variante
+## Formulario de producto
 
-Una variante es una combinación de color, talla y opciones con su propio inventario. Un producto nuevo empieza con una sola fila; al agregar variantes se muestran sus números. Cuatro filas no son cuatro funciones distintas ni una cantidad obligatoria. Combinaciones repetidas se rechazan antes de guardar.
+Un producto nuevo tiene una sola presentación: Color, Muestra de color, Talla si la categoría la requiere, Stock y Costo USD (privado, para calcular el inventario). Solo se usa el precio general. Se retiraron la ayuda desplegable, Agregar variante, precio por variante, SKU y URL del proveedor. La plantilla CSV nueva tampoco ofrece esos tres últimos campos; el lector conserva compatibilidad con archivos antiguos.
 
-| Campo | Uso |
-|---|---|
-| Color | Nombre base del color/diseño. |
-| Nombre para el cliente | Etiqueta opcional que verá el comprador. Si Color está vacío, también se usa como nombre base. |
-| Muestra de color (antes Hex) | Tono del selector; para Blanco escoger #FFFFFF. Es independiente del texto. |
-| Precio variante USD | Opcional; vacío utiliza el precio general. |
-| Stock | Unidades de esta variante. |
-| Costo USD | Costo por unidad, privado; alimenta el valor de inventario. |
-| SKU proveedor | Código de referencia del proveedor, opcional y privado. |
-| URL proveedor | Enlace HTTPS de referencia, opcional y privado. |
+Color asociado toma el color escrito en el formulario. Las fotos se preparan localmente y se suben al publicar. Si un producto antiguo tiene varias presentaciones guardadas, se edita una por vez mediante un selector; no se eliminan registros existentes al abrir ni al guardar. Los datos antiguos de proveedor se conservan sin mostrarse; al publicar se aplica el precio general a todas las presentaciones.
 
-Color asociado se llena con los colores de las variantes. Antes solo leía el nombre interno, por eso escribir Blanco únicamente en Color visible dejaba el selector vacío. Ahora admite ese caso, conserva la elección al editar otros campos y explica qué falta si todavía no hay colores. Las fotos elegidas se preparan localmente y se suben al publicar.
+Los errores de publicación aparecen en un mensaje persistente dentro del pie del editor, visible incluso a 320 px. Las notificaciones y el loader se trasladan al diálogo abierto para que la capa modal no los oculte. Al cerrar vuelven al documento principal. Un fallo de red al publicar permite reintentar usando los identificadores ya guardados, sin crear un segundo producto.
 
 ## Datos del dashboard
 
@@ -29,16 +20,16 @@ Sirve para cargar varios productos desde Excel/Sheets como CSV UTF-8 separado po
 
 ## Cursor y estilos
 
-La imagen entregada se aisló con transparencia y se exportó a PNG de 32×32, con hotspot 29,3. Ambos sitios usan el mismo asset. Los campos editables mantienen el cursor de texto. Los builds versionan los assets CSS/JS y el cursor según su contenido, para evitar estilos o cursores anteriores después de reconstruir.
+La imagen entregada se aisló con transparencia y se exportó a PNG de 40×40, con hotspot 36,4. Ambos sitios usan el mismo asset. Los campos editables mantienen el cursor de texto. Los builds versionan los assets CSS/JS y el cursor según su contenido, para evitar estilos o cursores anteriores después de reconstruir.
 
-Se retiró Sesión iniciada. El editor y la sección de fotos tienen padding adaptable, y las variantes se identifican por número. El servidor local ahora resuelve /producto/<slug>/ y envía no-store; sigue limitado a loopback y a dist/dist-panel del proyecto.
+Se retiró Sesión iniciada. El editor y la sección de fotos tienen padding adaptable, y se muestra un solo bloque de color/talla/stock. El servidor local ahora resuelve /producto/<slug>/ y envía no-store; sigue limitado a loopback y a dist/dist-panel del proyecto.
 
 ## Verificación
 
 - verify: 44/44.
-- browser_smoke: 462/462, incluyendo cursor en móvil/escritorio, navegación y recarga de cinco páginas, PNG de 32×32 y alfa transparente.
-- admin_workflow_test: color visible sin nombre interno, una/cuatro filas, selección de foto, rechazo de combinaciones duplicadas, publicación simulada, cantidades persistidas, indicadores dinámicos, costos desconocidos, plantilla CSV vacía y cursor entre secciones/recarga.
+- browser_smoke: 494/494, incluyendo cursor en móvil/escritorio, navegación y recarga de cinco páginas, PNG de 40×40 y alfa transparente.
+- admin_workflow_test: formulario único, talla según categoría, color y fotos, errores sobre el modal (320 px), reintento sin duplicados, conservación de presentaciones antiguas, cantidades, indicadores dinámicos y plantilla CSV.
 - Capturas de fotos en 320/390/768/1366: artifacts/panel-fotos-*.png.
 - Vistas reales de home, catálogo, tallas, ficha inexistente y login del panel: HTTP 200, no-store, assets/cursor versionados y recarga sin errores JavaScript. La ficha inexistente muestra el estado de producto no disponible; no se creó un producto para probarla.
 
-No se agregaron productos ni fotos de producto al Supabase real. Las pruebas de publicación usaron una API simulada. Logs: artifacts/admin-refinements-test.log, admin-refinements-verify.log y cursor-browser-test.log.
+No se agregaron productos ni fotos de producto al Supabase real. Las pruebas de publicación usaron una API simulada. Logs actuales: artifacts/panel-final.log y artifacts/browser-final.log. El loader se mide con MutationObserver dentro del navegador; no mediante esperas del proceso externo.
