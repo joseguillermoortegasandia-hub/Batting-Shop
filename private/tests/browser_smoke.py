@@ -84,13 +84,16 @@ def main():
     context=browser.new_context();context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page()
     for width in [320,390,768,1366]:
      page.set_viewport_size({'width':width,'height':900});page.goto(origin+'/tallas.html?marca=Louisville');page.wait_for_selector('.size-table')
-     for brand in ['Franklin','Nike','Under Armour','Louisville']:
+     for brand in ['Franklin','Nike','Under Armour','Louisville','Adidas']:
       page.get_by_role('button',name=brand,exact=True).click()
       check(f'{width} tabla {brand}',page.locator('.size-table tbody tr').count()>0)
       check(f'{width} {brand} sin avisos ni fuentes externas',page.locator('.guide-note, #guideContent a').count()==0)
       inspect(page,f'{width} tallas {brand}')
+     page.get_by_role('button',name='Louisville',exact=True).click()
      check(f'{width} Louisville modelo identificado','TPX Pro' in page.locator('#guideContent').inner_text() and page.locator('.size-table tbody tr').count()==10)
+     page.get_by_role('button',name='Louisville',exact=True).click()
      shot(page,width,'tallas-louisville')
+     page.get_by_role('button',name='Adidas',exact=True).click();check(f'{width} Adidas Adizero tallas confirmadas','Adizero' in page.locator('#guideContent').inner_text() and page.locator('.size-table tbody tr').count()==6);shot(page,width,'tallas-adidas')
     context.close()
     context=browser.new_context();context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page()
     page.goto(origin+'/producto/guante-franklin/');page.wait_for_selector('#productQuantity')

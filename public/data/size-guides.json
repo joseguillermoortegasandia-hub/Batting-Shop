@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-03",
+  "updated": "2026-11-04",
   "brands": {
     "Franklin": {
       "note": "Franklin mide desde la base de la palma hasta la punta del dedo medio. Las tallas juveniles y adultas no son equivalentes.",
@@ -347,6 +347,45 @@
               "L",
               "6.75–7",
               "17.1–17.8"
+            ]
+          ]
+        }
+      ]
+    },
+    "Adidas": {
+      "note": "Adizero 4.0 y 6.0 · Adulto. Tallas comerciales publicadas por Adidas/Saranac. Las medidas de mano en centímetros están pendientes de confirmar para esta línea.",
+      "source": "https://catalogs.asbsports.com/vendors/pdfs/Adidas-Team_Saranac-FW26.pdf",
+      "sections": [
+        {
+          "title": "Adizero – Adulto",
+          "columns": [
+            "Talla",
+            "Nombre"
+          ],
+          "rows": [
+            [
+              "XS",
+              "Extra pequeña"
+            ],
+            [
+              "S",
+              "Pequeña"
+            ],
+            [
+              "M",
+              "Mediana"
+            ],
+            [
+              "L",
+              "Grande"
+            ],
+            [
+              "XL",
+              "Extra grande"
+            ],
+            [
+              "2XL / XXL",
+              "Doble extra grande"
             ]
           ]
         }

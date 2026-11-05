@@ -13,3 +13,15 @@ Los títulos identifican TPX Pro; no se presenta como tabla universal ni como me
 La ficha oficial de Genuine V2 solo permitió confirmar tallas comerciales de adulto S–2XL:
 https://www.slugger.com/en-us/products/genuine-v2-batting-gloves-wb57307
 No se extrapolan medidas entre modelos.
+
+## Adidas Adizero — revisión 2026-11-04
+
+El propietario indicó la línea Adizero, sin precisar versión. Se agregó Adidas con tallas comerciales de adulto XS, S, M, L, XL y 2XL/XXL, confirmadas para Adizero 4.0 y 6.0 en catálogos del fabricante Adidas/Saranac:
+
+- https://catalogs.asbsports.com/vendors/pdfs/ADIDAS-SARANAC-SS24.pdf (Adizero 4.0)
+- https://catalogs.asbsports.com/vendors/pdfs/Adidas-Team_Saranac-FW26.pdf (Adizero 6.0)
+- Ficha oficial de béisbol Adizero 4.0: https://www.adidas.com/us/adizero-4.0-batting-gloves/CK7059.html
+
+No se encontró una tabla numérica específica verificable. La página lo indica en texto normal; no se añadieron alertas naranjas ni enlaces externos. No se extrapolan medidas de otros deportes, del genérico Other Gloves ni de guantines de otra marca. Tampoco se añade una tabla juvenil no confirmada. Una equivalencia de longitud queda pendiente de la guía del proveedor/fabricante para la versión que se venderá.
+
+Los enlaces de marca admiten diferencias de mayúsculas/minúsculas y el alias Adidas Adizero.
