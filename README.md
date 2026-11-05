@@ -210,3 +210,9 @@ Node 24 y pnpm 11.5.1. La configuración de pnpm está en pnpm-workspace.yaml; s
 Ver la configuración exacta de los dos proyectos en [private/deploy/PAGES.md](private/deploy/PAGES.md) y el informe en [private/docs/PREDEPLOY_2026-11-04.md](private/docs/PREDEPLOY_2026-11-04.md). Las plantillas wrangler.store.jsonc y wrangler.panel.jsonc se seleccionan con pnpm run configure:pages store/panel; no despliegan automáticamente.
 
 Pruebas adicionales: pnpm run test:panel, pnpm run test:pages y pnpm run check:live. El workflow de GitHub solo ejecuta pruebas y auditoría, sin credenciales de Supabase ni permisos de publicación. Su ejecución remota debe verificarse en Actions después de subir los cambios.
+
+### Reabrir las dos vistas locales en Windows
+
+Ejecutar `pnpm run preview:all` tras compilar con `pnpm run build:local` y `pnpm run build:panel:local`. Inicia tienda en http://localhost:8080/ y panel en http://localhost:8081/ en segundo plano, sin ventanas de consola, con logs separados en artifacts/preview-servers. Conserva los servidores que respondan correctamente; solo reinicia un proceso Python con el puerto, bind y ruta absoluta de salida de este proyecto. No detiene otros servicios. Comprobado con HTTP y Chrome contra ambas vistas reales, sin crear productos.
+
+Los servidores locales deben volver a iniciarse después de reiniciar Windows. El sitio desplegado en Internet no dependerá de estos procesos.

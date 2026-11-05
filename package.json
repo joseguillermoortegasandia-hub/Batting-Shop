@@ -16,7 +16,8 @@
     "preview:panel": "python -m http.server 8081 --bind 127.0.0.1 --directory dist-panel",
     "test:pages": "python private/tests/pages_runtime_test.py",
     "configure:pages": "node private/scripts/configure-pages.mjs",
-    "check:live": "node --env-file=.env.local private/scripts/check-live.mjs"
+    "check:live": "node --env-file=.env.local private/scripts/check-live.mjs",
+    "preview:all": "pwsh -NoProfile -File private/scripts/start-previews.ps1"
   },
   "description": "Batting Shop V4 Stage 3 — alias de slugs, CSV dinámico attr: y cierre acumulativo de las tres etapas.",
   "engines": {
