@@ -213,6 +213,8 @@ Pruebas adicionales: pnpm run test:panel, pnpm run test:pages y pnpm run check:l
 
 ### Reabrir las dos vistas locales en Windows
 
-Ejecutar `pnpm run preview:all` tras compilar con `pnpm run build:local` y `pnpm run build:panel:local`. Inicia tienda en http://localhost:8080/ y panel en http://localhost:8081/ en segundo plano, sin ventanas de consola, con logs separados en artifacts/preview-servers. Conserva los servidores que respondan correctamente; solo reinicia un proceso Python con el puerto, bind y ruta absoluta de salida de este proyecto. No detiene otros servicios. Comprobado con HTTP y Chrome contra ambas vistas reales, sin crear productos.
+Ejecutar `pnpm run preview:all` tras compilar con `pnpm run build:local` y `pnpm run build:panel:local`. Inicia tienda en http://localhost:8080/ y panel en http://localhost:8081/ en segundo plano, sin ventanas de consola, con logs separados en artifacts/preview-servers. Conserva los servidores que respondan correctamente; solo reinicia servidores de este proyecto comprobando su script, puerto y ruta absoluta de salida. No detiene otros servicios. Comprobado con HTTP y Chrome contra ambas vistas reales, sin crear productos.
 
 Los servidores locales deben volver a iniciarse después de reiniciar Windows. El sitio desplegado en Internet no dependerá de estos procesos.
+
+El servidor local resuelve también /producto/<slug>/ y las rutas de catálogo/tallas/favoritos sin extensión; envía no-store para no conservar versiones anteriores. Los builds generan versiones por contenido para CSS/JS y el cursor. Explicación de variantes, fotos, CSV y datos del dashboard: private/docs/ADMIN_FIELDS_AND_CURSOR.md.

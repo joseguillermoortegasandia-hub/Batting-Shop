@@ -14,7 +14,7 @@ function Test-Preview([int]$Port, [string]$Marker) {
         $response = $previewClient.GetAsync("http://127.0.0.1:$Port/").GetAwaiter().GetResult()
         try {
             $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-            return ($response.StatusCode -eq 200 -and $body.Contains($Marker))
+            return ($response.StatusCode -eq 200 -and $body.Contains($Marker) -and $response.Headers.CacheControl.NoStore)
         } finally { $response.Dispose() }
     } catch { return $false }
 }
@@ -24,6 +24,7 @@ $previewSites = @(
     @{ Name='administrador'; Port=8081; Directory='dist-panel'; Marker='id="adminEmail"' }
 )
 $previewResults = @()
+$previewServerScript = Join-Path $previewRoot 'private\scripts\preview-server.py'
 try {
     foreach ($site in $previewSites) {
         $directory = Join-Path $previewRoot $site.Directory
@@ -36,16 +37,17 @@ try {
                 $process = Get-CimInstance Win32_Process -Filter "ProcessId=$owner"
                 $portPattern = '-m\s+http\.server\s+' + $site.Port + '\b'
                 $directoryPattern = '--directory\s+(?:"' + [regex]::Escape($directory) + '"|' + [regex]::Escape($directory) + ')(?:\s|$)'
+                $ownServer = ($process.CommandLine -match [regex]::Escape($previewServerScript) -and $process.CommandLine -match ('--port\s+' + $site.Port + '\b'))
+                $legacyServer = ($process.CommandLine -match $portPattern -and $process.CommandLine -match '--bind\s+127\.0\.0\.1\b')
                 if ($process.Name -notmatch '^python(?:[0-9.]*)?\.exe$' -or
-                    $process.CommandLine -notmatch $portPattern -or
-                    $process.CommandLine -notmatch $directoryPattern -or
-                    $process.CommandLine -notmatch '--bind\s+127\.0\.0\.1\b') {
+                    (-not $ownServer -and -not $legacyServer) -or
+                    $process.CommandLine -notmatch $directoryPattern) {
                     throw "El puerto $($site.Port) pertenece a otro servicio. No se modificó ese proceso."
                 }
                 Stop-Process -Id $owner
             }
             $stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
-            $arguments = @('-u','-m','http.server',"$($site.Port)",'--bind','127.0.0.1','--directory',('"'+$directory+'"'))
+            $arguments = @('-u',('"'+$previewServerScript+'"'),'--port',"$($site.Port)",'--directory',('"'+$directory+'"'))
             $child = Start-Process -FilePath $previewPython -ArgumentList $arguments -WorkingDirectory $previewRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $previewLogs "$($site.Name)-$stamp.out.log") -RedirectStandardError (Join-Path $previewLogs "$($site.Name)-$stamp.err.log")
             $deadline = [DateTime]::UtcNow.AddSeconds(10)
             while (-not (Test-Preview $site.Port $site.Marker)) {
