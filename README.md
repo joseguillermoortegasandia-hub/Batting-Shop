@@ -191,7 +191,7 @@ Las fotos que ya estén en Storage necesitan volver a subirse o migrarse con una
 
 verify usa builds temporales y no sustituye la biblioteca ni borra node_modules/dist.
 browser_smoke intercepta las cuatro RPC con datos de prueba y genera 24 capturas en artifacts/screenshots: home, catálogo, ficha, carrito, favoritos y categorías en 320/390/768/1366. Comprueba además 360/412/1024/1920, targets, texto, overflow, búsqueda, loader, estados vacío/error, carrito y procesamiento de imágenes.
-Las pruebas del Worker usan un adaptador local de HTMLRewriter y caché. Un GET local del contrato da 200 con title y og:title; falta comprobarlo en Cloudflare real. No se probó Supabase Auth/Storage/RLS remoto, distribución edge de caché, previews reales de WhatsApp/Facebook ni los navegadores de iPhone/Instagram. El flujo elimina window.open asíncrono y conserva wa.me, pero la confirmación en esos dispositivos requiere pruebas reales.
+Las pruebas del Worker incluyen el contrato simulado y Pages/workerd nativo en localhost (test:pages). Se verificaron RPC, permisos anon y listado de Storage contra Supabase real sin escribir productos. La autenticación y subida real de fotos por el propietario, la distribución edge de caché, las previews reales de WhatsApp/Facebook y los navegadores de iPhone/Instagram requieren comprobación posterior. El flujo elimina window.open asíncrono y conserva wa.me, pero la confirmación en esos dispositivos requiere pruebas reales.
 
 Fuentes: [Routing de Pages](https://developers.cloudflare.com/pages/functions/routing/), [headers estáticos](https://developers.cloudflare.com/pages/configuration/headers/), [buckets públicos de Supabase](https://supabase.com/docs/guides/storage/buckets/fundamentals), [políticas de Storage](https://supabase.com/docs/guides/storage/security/access-control).
 
@@ -202,3 +202,11 @@ El panel reúne información, colores/tallas, stock, fotos y vista previa en un 
 Cada producto permite una unidad o varias (hasta 99) por pedido. La ficha y el carrito comparten el límite entre variantes. Aplicar `20261104141323_product_order_quantity.sql` después de las migraciones anteriores; su rollback está en `private/supabase/rollback/`. No agrega productos. Detalles y límites de la prueba en `private/docs/UNIFIED_PRODUCT_EDITOR.md`.
 
 El cursor de bate se comparte entre tienda y panel; el cursor de texto se reserva para los campos editables.
+
+## Preparación final para despliegue
+
+Node 24 y pnpm 11.5.1. La configuración de pnpm está en pnpm-workspace.yaml; solo se permite el script de instalación de workerd. Wrangler 4.157.0 es una dependencia de desarrollo para probar Pages, no se envía a los visitantes.
+
+Ver la configuración exacta de los dos proyectos en [private/deploy/PAGES.md](private/deploy/PAGES.md) y el informe en [private/docs/PREDEPLOY_2026-11-04.md](private/docs/PREDEPLOY_2026-11-04.md). Las plantillas wrangler.store.jsonc y wrangler.panel.jsonc se seleccionan con pnpm run configure:pages store/panel; no despliegan automáticamente.
+
+Pruebas adicionales: pnpm run test:panel, pnpm run test:pages y pnpm run check:live. El workflow de GitHub solo ejecuta pruebas y auditoría, sin credenciales de Supabase ni permisos de publicación. Su ejecución remota debe verificarse en Actions después de subir los cambios.

@@ -25,6 +25,14 @@ function safeReplacement(value){return String(value).replaceAll('\\','\\\\').rep
 function absolute(path){return `${siteUrl}${path.startsWith('/')?'':'/'}${path}`}
 async function walk(dir){const out=[];for(const name of await readdir(dir)){const full=join(dir,name),s=await stat(full);if(s.isDirectory())out.push(...await walk(full));else out.push(full)}return out}
 
+// La publicación remota requiere un origen HTTPS válido, sin rutas ni credenciales.
+try{
+ const origin=new URL(siteUrl);
+ if(origin.username||origin.password||origin.pathname!=='/'||origin.search||origin.hash)fail('SITE_URL debe contener únicamente el origen, sin ruta, parámetros ni credenciales.');
+ if(isCloudflare&&origin.protocol!=='https:')fail('Cloudflare Pages requiere SITE_URL/CF_PAGES_URL con HTTPS.');
+ if(!isCloudflare&&origin.protocol!=='https:'&&!(origin.protocol==='http:'&&['localhost','127.0.0.1'].includes(origin.hostname)))fail('Usa HTTPS o localhost para SITE_URL.');
+}catch{fail('SITE_URL/CF_PAGES_URL no es una URL válida.')}
+
 if(isProduction&&!siteUrlInput)fail(`CF_PAGES_BRANCH=${cfBranch} coincide con la rama de producción (${productionBranch}) pero falta SITE_URL. Los previews pueden usar CF_PAGES_URL.`);
 if(isCloudflare&&!isProduction&&!siteUrlInput)warn(`preview de Cloudflare: canonical/sitemap usarán temporalmente ${cfPagesUrl||siteUrl}. En producción define SITE_URL.`);
 if(supabaseUrl&&!validSupabaseUrl(supabaseUrl))fail('SUPABASE_URL debe tener el formato https://<proyecto>.supabase.co.');

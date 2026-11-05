@@ -13,3 +13,10 @@ private/supabase/.temp/
 private/data/private-seed.csv
 private/supabase/seed.sql
 private/reference-images/
+
+# Configuración real y estado local de Cloudflare
+.env.production.local
+.dev.vars*
+.wrangler/
+wrangler.jsonc
+!.env.production.example

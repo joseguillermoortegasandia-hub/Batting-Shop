@@ -51,7 +51,7 @@ def main():
    check('Tienda sin SDK ni archivos privados',not (out/'admin').exists() and not list(out.rglob('supabase-*.js')))
    check('Sin SQL ni datos privados desplegados',not any(p.suffix in {'.sql','.csv'} and 'admin/import-template.csv' not in p.as_posix() for p in out.rglob('*')))
    result=subprocess.run(['node','private/tests/worker_test.mjs',str(out/'_worker.js')],cwd=ROOT,capture_output=True,text=True);check('Contrato Worker con mocks locales',result.returncode==0,result.stdout+result.stderr)
-  for label,extra in [('Origen invalido',{'SUPABASE_URL':'https://evil.example'}),('Clave secreta',{'SUPABASE_ANON_KEY':'sb_secret_forbidden'}),('Produccion sin dominio',{'CF_PAGES_BRANCH':'main'})]:
+  for label,extra in [('Origen invalido',{'SUPABASE_URL':'https://evil.example'}),('Clave secreta',{'SUPABASE_ANON_KEY':'sb_secret_forbidden'}),('Produccion sin dominio',{'CF_PAGES_BRANCH':'main'}),('Produccion HTTP',{'CF_PAGES_BRANCH':'main','SITE_URL':'http://shop.example.com'}),('Origen con ruta',{'SITE_URL':'https://shop.example.com/subruta'}),('Origen con credenciales',{'SITE_URL':'https://user:pass@shop.example.com'})]:
    result=build(extra);check('Rechaza '+label,result.returncode!=0,result.stdout+result.stderr)
   result=build({'CF_PAGES_BRANCH':'main','SITE_URL':'https://shop.example.com'});check('Build produccion configurada',result.returncode==0,result.stdout+result.stderr)
  result=subprocess.run([sys.executable,'private/tests/separation_test.py'],cwd=ROOT,capture_output=True,text=True);check('Separacion HTTP y autenticacion criptografica del panel',result.returncode==0,result.stdout+result.stderr)
