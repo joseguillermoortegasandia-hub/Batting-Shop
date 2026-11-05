@@ -1762,7 +1762,7 @@ button{min-width:40px}
 [hidden]{display:none!important}
 
 /* Cursor de bate y texto editable únicamente en campos de entrada. */
-html,body,body * {cursor:url('/assets/icons/bat-cursor-v3.png') 36 4,default !important;caret-color:transparent}
+html,body,body * {cursor:url('/assets/icons/bat-cursor-v4.cur') 41 6,url('/assets/icons/bat-cursor-v4.png') 41 6,default !important;caret-color:transparent}
 body {-webkit-user-select:none;user-select:none}
 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([disabled]):not([readonly]),textarea:not([disabled]):not([readonly]),[contenteditable="true"],[contenteditable="true"] * {cursor:text !important;caret-color:auto;-webkit-user-select:text;user-select:text}
 
@@ -1771,3 +1771,15 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="c
 .product-quantity .qty-control {width:max-content}
 .product-quantity input {width:64px;min-height:44px;text-align:center;border:0;background:transparent;font:inherit;color:inherit}
 .product-quantity small {font-size:12px;color:var(--muted)}
+
+/* Limitar el tamaño intrínseco de fotos grandes dentro de la portada. */
+@media(min-width:1024px){
+ .hero-inner{grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr)}
+ .hero-copy,.hero-visual,.hero-product{min-width:0}
+ .hero-visual{grid-template-columns:repeat(2,minmax(0,1fr));max-width:100%;align-items:center}
+ .hero-product{display:block;width:100%;overflow:hidden}
+ .hero-product img{display:block;width:100%;height:auto;max-height:280px;object-fit:contain}
+}
+.category-card,.product-card{min-width:0}
+
+.visual-category strong,.visual-category small{display:block}

@@ -28,7 +28,7 @@ await rm(output,{recursive:true,force:true});await mkdir(output,{recursive:true}
 await cp(join(root,'panel'),output,{recursive:true});
 await mkdir(join(output,'assets/images'),{recursive:true});await mkdir(join(output,'assets/icons'),{recursive:true});await mkdir(join(output,'assets/vendor'),{recursive:true});
 for(const name of ['logo.webp','favicon-32.png'])await cp(join(root,'public/assets/images',name),join(output,'assets/images',name));
-for(const name of ['softball.svg','bat-cursor-v3.png'])await cp(join(root,'public/assets/icons',name),join(output,'assets/icons',name));
+for(const name of ['softball.svg','bat-cursor-v4.png','bat-cursor-v4.cur'])await cp(join(root,'public/assets/icons',name),join(output,'assets/icons',name));
 await cp(vendor,join(output,`assets/vendor/supabase-${version}.js`));
 const replacements={'__SUPABASE_URL__':supabaseUrl,'__SUPABASE_ANON_KEY__':key,'__PANEL_URL__':panelUrl,'__STOREFRONT_URL__':storeUrl,'__SUPABASE_ORIGIN__':new URL(supabaseUrl).origin};
 const escaped=value=>value.replaceAll('\\','\\\\').replaceAll("'","\\'").replaceAll('\r','\\r').replaceAll('\n','\\n').replaceAll('<','\\x3c');

@@ -7,12 +7,12 @@ export async function fingerprintAssets(root){
  const files=[];
  async function walk(directory){for(const entry of await readdir(directory,{withFileTypes:true})){const path=join(directory,entry.name);if(entry.isDirectory())await walk(path);else files.push(path)}}
  await walk(root);
- const cursor=files.find(path=>path.endsWith('bat-cursor-v3.png'));
- if(cursor){
+ for(const cursor of files.filter(path=>/bat-cursor-v4\.(png|cur)$/.test(path))){
   const version=createHash('sha256').update(await readFile(cursor)).digest('hex').slice(0,12);
+  const url='/'+relative(root,cursor).replaceAll('\\','/');
   for(const path of files.filter(path=>path.endsWith('.css'))){
    const css=await readFile(path,'utf8');
-   const revised=css.replace(/url\((['"]?)(\/assets\/icons\/bat-cursor-v3\.png)(?:\?v=[a-f0-9]+)?\1\)/g,(_match,quote,url)=>`url(${quote}${url}?v=${version}${quote})`);
+   const revised=css.replaceAll(url,url+'?v='+version);
    if(revised!==css)await writeFile(path,revised);
   }
  }

@@ -132,7 +132,7 @@ begin;
 set local role anon;
 select public.get_public_catalog() as anon_catalog_with_force_rls;
 do $$ declare t text; begin
- foreach t in array array['products','product_variants','inventory_private','product_slug_aliases','audit_log'] loop
+ foreach t in array array['products','product_variants','inventory_private','product_slug_aliases','audit_log','purchase_invoices'] loop
   begin
    execute format('select 1 from public.%I limit 1',t);
    raise exception 'FALLO: anon tiene SELECT directo sobre %',t;
@@ -145,3 +145,8 @@ rollback;
 -- 13) Inspeccionar políticas permisivas adicionales que puedan permitir listar.
 select policyname,roles,cmd,qual,with_check from pg_policies
 where schemaname='storage' and tablename='objects' order by policyname;
+
+-- 14) Facturas: RLS habilitada/forzada y bucket privado.
+select relname,relrowsecurity,relforcerowsecurity from pg_class
+where oid='public.purchase_invoices'::regclass;
+select id,public,file_size_limit,allowed_mime_types from storage.buckets where id='purchase-invoices';

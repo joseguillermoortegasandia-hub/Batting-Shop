@@ -14,7 +14,7 @@ Esta entrega es **acumulativa**: contiene Etapa 1 + Etapa 2 + Etapa 3.
 - Pedido por WhatsApp, Favoritos locales, barra inferior móvil y WhatsApp flotante.
 - Categorías/atributos dinámicos desde Supabase.
 - Estado **PRÓXIMAMENTE** si no hay productos publicados.
-- Precio general o por variante; `NULL` = **Consultar precio**.
+- Precio general por producto; `NULL` = **Consultar precio**.
 - URLs limpias `/producto/<slug>/`.
 - OG/Twitter dinámico por producto mediante Cloudflare Worker, con fallback al HTML normal si Supabase falla.
 - Alias de slugs: una URL antigua de producto resuelve y redirige al slug actual.
@@ -23,42 +23,14 @@ Esta entrega es **acumulativa**: contiene Etapa 1 + Etapa 2 + Etapa 3.
 ### Admin
 
 - Auth Supabase (correo y contraseña) + permisos admin + RLS.
-- Productos, inventario, imágenes, categorías, atributos, auditoría, edición masiva e importación CSV.
+- Productos, inventario, imágenes, categorías, atributos, auditoría, edición masiva y facturas privadas.
 - Crear categorías sin tocar código.
 - Pelotas permanece sembrada **inactiva** hasta que el dueño decida activarla.
 - Cambiar un slug conserva el slug anterior como alias automáticamente.
-- Importación CSV dinámica mediante columnas `attr:<clave>`.
-- Todo CSV entra como **borrador**.
-
-## CSV dinámico
-
-Columnas base recomendadas:
-
-```text
-code,slug,name,brand,category,price,color,color_label,color_hex,size_label,normalized_size,size_sort_order,sale_price,stock,cost,provider_sku,provider_source_url
-```
-
-Los atributos definidos en la categoría se agregan como:
-
-```text
-attr:edad_nivel
-attr:tipo
-attr:tamano
-attr:material
-attr:presentacion
-```
-
-El Admin genera una plantilla desde la taxonomía actual. Reglas:
-
-- `select`: el valor debe existir en las opciones de la categoría.
-- `multiselect`: valores separados con `|`.
-- `number`: número válido.
-- `boolean`: `Sí/No`, `true/false` o `1/0`.
-- Un `attr:` vacío que pertenezca a otra categoría se ignora.
-- Un `attr:` con valor que no exista para la categoría seleccionada se rechaza.
-- `price` y `sale_price` vacíos = sin precio / Consultar precio.
-- `stock` debe ser entero >= 0.
-- Los imports nunca publican automáticamente.
+- Colores con varias fotos y tallas con stock independiente.
+- Eliminación individual y múltiple con confirmación.
+- Duplicación completa de producto, fotos, colores y tallas; código y URL nuevos.
+- Facturas privadas con imagen, nombre y número.
 
 ## Base de datos
 
@@ -197,11 +169,11 @@ Fuentes: [Routing de Pages](https://developers.cloudflare.com/pages/functions/ro
 
 ## Editor único y cantidades
 
-El panel reúne información, colores/tallas, stock, fotos y vista previa en un solo formulario. Publicar producto guarda las imágenes preparadas y publica al terminar; no hay selector de estado ni botón de borrador. La importación CSV conserva su revisión independiente.
+El panel reúne información, colores/tallas, stock, fotos y vista previa en un solo formulario. Publicar producto guarda las imágenes preparadas y publica al terminar; no hay selector de estado ni botón de borrador. Cada color agrupa fotos y tallas con su stock. Facturas sustituye la antigua importación CSV.
 
 Cada producto permite una unidad o varias (hasta 99) por pedido. La ficha y el carrito comparten el límite entre variantes. Aplicar `20261104141323_product_order_quantity.sql` después de las migraciones anteriores; su rollback está en `private/supabase/rollback/`. No agrega productos. Detalles y límites de la prueba en `private/docs/UNIFIED_PRODUCT_EDITOR.md`.
 
-El editor muestra un único bloque de color, talla opcional y stock, con precio general. Los errores de publicación permanecen visibles dentro del formulario. El cursor de bate de 40 px se comparte entre tienda y panel; el cursor de texto se reserva para los campos editables.
+El editor agrupa los colores, las fotos y las tallas con su stock, con precio general. Los errores de publicación permanecen visibles dentro del formulario. El cursor de bate de 48 px en formato nativo CUR con PNG de respaldo se comparte entre tienda y panel; el cursor de texto se reserva para los campos editables.
 
 ## Preparación final para despliegue
 
@@ -217,4 +189,15 @@ Ejecutar `pnpm run preview:all` tras compilar con `pnpm run build:local` y `pnpm
 
 Los servidores locales deben volver a iniciarse después de reiniciar Windows. El sitio desplegado en Internet no dependerá de estos procesos.
 
-El servidor local resuelve también /producto/<slug>/ y las rutas de catálogo/tallas/favoritos sin extensión; envía no-store para no conservar versiones anteriores. Los builds generan versiones por contenido para CSS/JS y el cursor. Explicación de variantes, fotos, CSV y datos del dashboard: private/docs/ADMIN_FIELDS_AND_CURSOR.md.
+El servidor local resuelve también /producto/<slug>/ y las rutas de catálogo/tallas/favoritos sin extensión; envía no-store para no conservar versiones anteriores. Los builds generan versiones por contenido para CSS/JS y el cursor. Explicación de variantes, fotos, facturas y datos del dashboard: private/docs/ADMIN_FIELDS_AND_CURSOR.md.
+
+
+## Facturas privadas y catálogo por color
+
+Aplicar `private/supabase/migrations/20261105025353_private_purchase_invoices.sql` después de las migraciones anteriores. Crea `purchase_invoices` con RLS forzada y el bucket **privado** `purchase-invoices` (imágenes de hasta 10 MB). El rollback exige vaciar ambos antes de retirar el módulo. No crea ni modifica productos.
+
+En el editor, **Agregar color** crea un grupo. **Agregar talla** añade stock y costo por talla; en categorías sin talla se registra directamente el stock del color. **Fotos de este color** selecciona el color de destino en la sección de fotos. Escribir un color conocido propone su tono; el selector permite ajustarlo. Publicar aplica un precio general. En la ficha pública, cambiar color cambia fotos y disponibilidad de tallas; mantiene la talla elegida si sigue disponible. Un color agotado permite ver fotos, pero no agregarlo al pedido.
+
+La duplicación conserva datos y estado; se publica inmediatamente si el original estaba publicado. Cada copia necesita IDs, código y slug propios. Las fotos comparten archivos con registros independientes: borrar una copia o quitar su foto no elimina archivos usados por el original. La limpieza física de archivos huérfanos queda pendiente de una operación separada de mantenimiento.
+
+Las facturas se consultan únicamente en el panel, con URLs firmadas temporales. No aparecen en el catálogo ni se incluyen sus imágenes en los ZIP. Cambiar de sección Facturas renueva sus enlaces.

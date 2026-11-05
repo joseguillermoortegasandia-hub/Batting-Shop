@@ -46,6 +46,10 @@ def main():
     found=next((p for p in PRODUCTS if p['slug']==args['p_slug']),None);data={**found,'maxQuantity':state['limit']} if found else None
    elif name=='get_related_products':data=[p for p in PRODUCTS if p['id']!=args['p_product_id']]
    elif name=='get_public_cart_state':data=[dict(variantId=uuid(20),productId=PRODUCTS[0]['id'],maxQuantity=state['limit'],slug=ITEM['slug'],name=ITEM['name'],available=state['available'],price=state['price'],options=ITEM['options'],imagePath=ITEM['image'])] if uuid(20) in args['p_variant_ids'] else []
+   if name=='get_public_cart_state':
+    for color in PRODUCTS[0].get('colors',[]):
+     for variant in color['variants']:
+      if variant['id'] in args['p_variant_ids']:data.append(dict(variantId=variant['id'],productId=PRODUCTS[0]['id'],maxQuantity=state['limit'],slug=PRODUCTS[0]['slug'],name=PRODUCTS[0]['name'],available=variant['available'],price=state['price'],options=[dict(label='Color',value=color['label']),dict(label='Talla',value=variant['sizeLabel'])],imagePath=color['images'][0]['storagePath']))
    route.fulfill(json=data,headers={'Access-Control-Allow-Origin':'*'})
   def inspect(page,label):
    result=page.evaluate('''()=>{const visible=e=>!!(e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden'&&e.closest('[aria-hidden="true"]')===null);return {
@@ -54,7 +58,7 @@ def main():
      smallText:[...document.querySelectorAll('body *')].filter(visible).filter(e=>[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&parseFloat(getComputedStyle(e).fontSize)<12).map(e=>e.outerHTML.slice(0,100)),
      favorites:[...document.querySelectorAll('.card-favorite')].filter(visible).map(e=>e.getBoundingClientRect().width)
    }}''')
-   check(label+' cursor cargado','bat-cursor-v3.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor'))
+   check(label+' cursor cargado','bat-cursor-v4.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor'))
    check(label+' sin overflow',not result['overflow'])
    check(label+' tactiles >=40',not result['smallButtons'],str(result['smallButtons']))
    check(label+' texto >=12',not result['smallText'],str(result['smallText']))
@@ -100,7 +104,7 @@ def main():
     page.locator('#productQuantity').fill('3');page.locator('#addOrder').click();page.wait_for_selector('.cart-item')
     page.wait_for_timeout(150);check('Ficha agrega tres unidades',page.evaluate('BattingCart.read()[0].qty')==3)
     check('WhatsApp incluye tres unidades','%C3%97%203' in page.locator('#cartWhatsapp').get_attribute('href'))
-    check('Cursor de bate fuera de campos','bat-cursor-v3.png' in page.locator('#productName').evaluate('(e)=>getComputedStyle(e).cursor'))
+    check('Cursor de bate fuera de campos','bat-cursor-v4.png' in page.locator('#productName').evaluate('(e)=>getComputedStyle(e).cursor'))
     check('Cursor de escritura solo en campo',page.locator('#productQuantity').evaluate('(e)=>getComputedStyle(e).cursor')=='text')
     state['limit']=1;context.close();context=browser.new_context();context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page()
     page.goto(origin+'/producto/guante-franklin/');page.wait_for_selector('#productQuantity');check('Producto de una unidad bloquea +',page.locator('#quantityPlus').is_disabled())
@@ -114,10 +118,26 @@ def main():
      page.goto(origin+path,wait_until='networkidle')
      for phase in ['navegacion','recarga']:
       if phase=='recarga':page.reload(wait_until='networkidle')
-      check(f'Cursor {phase} {path}','bat-cursor-v3.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor'))
-    cursor=page.evaluate("""async()=>{const response=await fetch('/assets/icons/bat-cursor-v3.png');const image=await createImageBitmap(await response.blob());const canvas=document.createElement('canvas');canvas.width=canvas.height=40;const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);return {ok:response.ok,width:image.width,height:image.height,corner:ctx.getImageData(0,0,1,1).data[3],middle:ctx.getImageData(20,20,1,1).data[3]}}""")
-    check('Cursor PNG 40px transparente',cursor['ok'] and cursor['width']==40 and cursor['height']==40 and cursor['corner']==0 and cursor['middle']>0)
+      check(f'Cursor {phase} {path}','bat-cursor-v4.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor'))
+    cursor=page.evaluate("""async()=>{const response=await fetch('/assets/icons/bat-cursor-v4.png');const image=await createImageBitmap(await response.blob());const canvas=document.createElement('canvas');canvas.width=canvas.height=48;const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);return {ok:response.ok,width:image.width,height:image.height,corner:ctx.getImageData(0,0,1,1).data[3],middle:ctx.getImageData(24,24,1,1).data[3]}}""")
+    check('Cursor PNG 48px transparente',cursor['ok'] and cursor['width']==48 and cursor['height']==48 and cursor['corner']==0 and cursor['middle']>0)
     context.close()
+    # Producto -> color -> tallas; cada color muestra exclusivamente sus fotos.
+    original_product=copy.deepcopy(PRODUCTS[0])
+    colors=[]
+    for index,(name,hexcode,sizes) in enumerate([('Azul','#2563eb',[('M',True),('L',False)]),('Rojo','#dc2626',[('S',True),('M',True)]),('Negro','#111111',[('M',False)])]):
+     colors.append(dict(id=uuid(70+index),name=name,label=name,hex=hexcode,images=[dict(storagePath=f'/assets/images/logo.webp?color={name}&foto={photo}',alt=f'{name} {photo}',width=3000,height=3000) for photo in [1,2]],variants=[dict(id=uuid(80+index*3+j),available=available,sizeLabel=size,normalizedSize=size) for j,(size,available) in enumerate(sizes)]))
+    PRODUCTS[0]['colors']=colors;PRODUCTS[0]['variants']=[]
+    context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/producto/guante-franklin/');page.wait_for_selector('#colorOptions button')
+    check('Galería inicial azul y dos fotos','color=Azul' in page.locator('#mainProductImage').get_attribute('src') and page.locator('#thumbs button').count()==2)
+    check('Talla sin stock deshabilitada',page.locator('#sizeOptions').get_by_role('button',name='L agotado',exact=True).is_disabled())
+    page.locator('#colorOptions').get_by_role('button',name='Rojo disponible',exact=True).click()
+    check('Cambiar color cambia fotos y conserva talla M','color=Rojo' in page.locator('#mainProductImage').get_attribute('src') and page.locator('#sizeOptions .active').inner_text()=='M')
+    page.locator('#thumbs button').last.click();check('Segunda foto del color seleccionado','foto=2' in page.locator('#mainProductImage').get_attribute('src'))
+    page.locator('#addOrder').click();check('Carrito conserva color y talla',page.evaluate("()=>{const item=BattingCart.read()[0];return item.options.some(o=>o.value==='Rojo')&&item.options.some(o=>o.value==='M')&&item.image.includes('color=Rojo')}") )
+    page.locator('[data-close-cart]').click()
+    page.locator('#colorOptions').get_by_role('button',name='Negro agotado',exact=True).click();check('Color agotado permite ver fotos sin comprar','color=Negro' in page.locator('#mainProductImage').get_attribute('src') and page.locator('#addOrder').is_disabled())
+    page.screenshot(path=str(OUT/'ficha-colores-390.png'),full_page=True);context.close();PRODUCTS[0]=original_product
     # Estados y tiempos del loader sin tocar dependencias ni fuentes.
     context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/');page.wait_for_selector('.product-card')
     timing=page.evaluate("""async()=>{

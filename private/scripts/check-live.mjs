@@ -19,12 +19,14 @@ check('Carrito real accesible como anon',cart.response.ok&&Array.isArray(cart.da
 const ids=Array.from({length:51},(_,i)=>'00000000-0000-4000-8000-'+String(i).padStart(12,'0'));
 const limit=await get('/rest/v1/rpc/get_public_cart_state',{p_variant_ids:ids});
 check('Carrito real rechaza más de 50 ids',!limit.response.ok&&String(limit.data?.message||'').includes('50'));
-for(const table of ['products','product_variants','inventory_private','product_slug_aliases','audit_log']){
+for(const table of ['products','product_variants','inventory_private','product_slug_aliases','audit_log','purchase_invoices']){
  const result=await get('/rest/v1/'+table+'?select=*&limit=1');
  check('Anon sin acceso directo a '+table,[401,403].includes(result.response.status));
 }
 const storage=await get('/storage/v1/object/list/product-images',{prefix:'',limit:1});
 check('Anon no lista fotos del bucket',[401,403].includes(storage.response.status)||(storage.response.ok&&Array.isArray(storage.data)&&!storage.data.length));
+const invoices=await get('/storage/v1/object/list/purchase-invoices',{prefix:'',limit:1});
+check('Anon no lista imágenes de facturas',[401,403].includes(invoices.response.status)||(invoices.response.ok&&Array.isArray(invoices.data)&&!invoices.data.length));
 const auth=await get('/auth/v1/settings');
 const signupDisabled=auth.response.ok&&auth.data?.disable_signup===true;
 console.log(signupDisabled?'PASS Registro público desactivado':'PENDIENTE Desactivar el registro público en Supabase Auth');

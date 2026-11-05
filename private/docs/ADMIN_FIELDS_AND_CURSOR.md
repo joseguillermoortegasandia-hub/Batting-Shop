@@ -1,35 +1,54 @@
-# Revisión de variantes, fotos, dashboard y cursor
+# Productos, colores, tallas, facturas y cursor
 
-## Formulario de producto
+## Carga de producto
 
-Un producto nuevo tiene una sola presentación: Color, Muestra de color, Talla si la categoría la requiere, Stock y Costo USD (privado, para calcular el inventario). Solo se usa el precio general. Se retiraron la ayuda desplegable, Agregar variante, precio por variante, SKU y URL del proveedor. La plantilla CSV nueva tampoco ofrece esos tres últimos campos; el lector conserva compatibilidad con archivos antiguos.
+1. Completar información y precio general del producto.
+2. Escribir el primer Color. Los nombres comunes en español/inglés proponen un tono; Muestra de color permite ajustarlo.
+3. Agregar tallas con stock y costo por talla si la categoría usa tallas. En categorías sin talla, completar directamente el inventario del color.
+4. Agregar color crea otro grupo dentro del mismo producto. No crea otra tarjeta pública.
+5. Fotos de este color selecciona el destino en Fotos del producto. Se pueden cargar varias fotos por color, ordenar y elegir su portada. Se exige al menos una foto para cada color con stock.
+6. Publicar sube fotos preparadas y publica al terminar. Los errores permanecen visibles dentro del pie del diálogo, también a 320 px. Se puede reintentar sin duplicar el producto.
 
-Color asociado toma el color escrito en el formulario. Las fotos se preparan localmente y se suben al publicar. Si un producto antiguo tiene varias presentaciones guardadas, se edita una por vez mediante un selector; no se eliminan registros existentes al abrir ni al guardar. Los datos antiguos de proveedor se conservan sin mostrarse; al publicar se aplica el precio general a todas las presentaciones.
+Cada combinación color/talla tiene su stock. Se rechazan combinaciones repetidas. La ficha pública cambia la galería y las tallas al cambiar de color; conserva la talla anterior si sigue disponible. Las tallas agotadas quedan deshabilitadas; los colores agotados permiten ver las fotos sin agregarlos al pedido. El carrito conserva color, talla e imagen de la combinación elegida.
 
-Los errores de publicación aparecen en un mensaje persistente dentro del pie del editor, visible incluso a 320 px. Las notificaciones y el loader se trasladan al diálogo abierto para que la capa modal no los oculte. Al cerrar vuelven al documento principal. Un fallo de red al publicar permite reintentar usando los identificadores ya guardados, sin crear un segundo producto.
+## Productos e inventario
 
-## Datos del dashboard
+La selección individual y Seleccionar visibles actualizan el contador. Eliminar y Eliminar seleccionados exigen confirmación. Se eliminan registros dependientes mediante las relaciones CASCADE existentes; no se ejecutaron eliminaciones reales durante el desarrollo.
 
-Los productos publicados/borradores se calculan con los productos leídos de Supabase; variantes no disponibles y valor del inventario salen de variantes e inventario privado. No se usan cifras de ejemplo. Cero se presenta como $0.00; si hay stock sin costo, el valor indica Por calcular. Se corrigió también la lectura de max_order_quantity al volver a editar un producto.
+Duplicar conserva nombre, marca, descripción, atributos, precio, estado, destacado, límite de unidades, colores, tallas, stock, costo e imágenes. Solo genera las identidades, código y URL que deben ser únicos. Si el original estaba publicado, la copia también se publica. La operación bloquea clics repetidos; si falla, intenta retirar únicamente la copia incompleta que acaba de crear.
 
-Los textos, nombres de columnas y reglas de negocio siguen siendo parte de la interfaz; no son datos de productos inventados. Las pruebas cambian los fixtures y comprueban que los indicadores se actualizan.
+Las fotos comparten los archivos ya subidos con registros separados: eliminar una copia o quitar su imagen no borra el archivo del original. La limpieza física de huérfanos se deja para mantenimiento independiente. Los archivos nuevos de una subida fallida sí se retiran si aún no tienen un registro guardado.
 
-## CSV
+Los indicadores del dashboard se calculan desde productos e inventario reales. Stock sin costo indica Por calcular. No se insertaron productos de demostración.
 
-Sirve para cargar varios productos desde Excel/Sheets como CSV UTF-8 separado por comas. Se descarga una plantilla con columnas base y atributos actuales, sin marca/categoría/producto de ejemplo prellenados. Se completa una fila por color/talla; las variantes de un producto comparten code. category usa el slug mostrado en Categorías. La importación mantiene borradores para que el propietario revise fotos antes de publicar. Subir una plantilla vacía muestra una explicación y no habilita importar.
+## Facturas
 
-## Cursor y estilos
+Facturas reemplaza Importar CSV; se retiraron navegación, formulario, lector y plantilla CSV. Se guarda nombre, número e imagen JPG/PNG/WebP (máximo 10 MB). La imagen se valida antes de enviarla. El bucket purchase-invoices es privado; la tabla purchase_invoices tiene RLS forzada y permiso solo para is_admin(). No existe lectura pública ni RPC de catálogo que incluya facturas.
 
-La imagen entregada se aisló con transparencia y se exportó a PNG de 40×40, con hotspot 36,4. Ambos sitios usan el mismo asset. Los campos editables mantienen el cursor de texto. Los builds versionan los assets CSS/JS y el cursor según su contenido, para evitar estilos o cursores anteriores después de reconstruir.
+El panel muestra URLs firmadas de cinco minutos, que se renuevan al entrar en Facturas. Eliminar factura requiere confirmación. La migración 20261105025353_private_purchase_invoices fue aplicada; su rollback exige exportar y vaciar las facturas antes de retirar el módulo. No toca productos.
 
-Se retiró Sesión iniciada. El editor y la sección de fotos tienen padding adaptable, y se muestra un solo bloque de color/talla/stock. El servidor local ahora resuelve /producto/<slug>/ y envía no-store; sigue limitado a loopback y a dist/dist-panel del proyecto.
+## Portada y cursor
 
-## Verificación
+La portada utiliza columnas minmax(0,fr), limita fotos a su contenedor y evita que el tamaño intrínseco de una foto de producto agrande la página. Se comprobó con el catálogo real: escritorio a 1366 y 1920 px, portada de 380 px, imágenes de 242 px y sin desbordamiento.
 
-- verify: 44/44.
-- browser_smoke: 494/494, incluyendo cursor en móvil/escritorio, navegación y recarga de cinco páginas, PNG de 40×40 y alfa transparente.
-- admin_workflow_test: formulario único, talla según categoría, color y fotos, errores sobre el modal (320 px), reintento sin duplicados, conservación de presentaciones antiguas, cantidades, indicadores dinámicos y plantilla CSV.
-- Capturas de fotos en 320/390/768/1366: artifacts/panel-fotos-*.png.
-- Vistas reales de home, catálogo, tallas, ficha inexistente y login del panel: HTTP 200, no-store, assets/cursor versionados y recarga sin errores JavaScript. La ficha inexistente muestra el estado de producto no disponible; no se creó un producto para probarla.
+El bate original transparente se empaqueta conservando proporciones y margen en un cursor nativo CUR de 48×48 con PNG de respaldo. Hotspot 41,6. Los campos editables conservan el cursor de texto. Ambos builds versionan CSS/JS y cursor por contenido para evitar caché antigua. El tamaño visual final también depende de la escala de pantalla y del sistema operativo.
 
-No se agregaron productos ni fotos de producto al Supabase real. Las pruebas de publicación usaron una API simulada. Logs actuales: artifacts/panel-final.log y artifacts/browser-final.log. El loader se mide con MutationObserver dentro del navegador; no mediante esperas del proceso externo.
+## Pruebas
+
+- verify: sintaxis JS/SQL, builds, separación y claves expuestas.
+- admin_workflow_test: cuenta sin permiso, publicación incompleta, errores visibles sobre el modal a 320 px, reintento sin duplicados, colores/tallas/fotos, detección y ajuste de tono, conservación de datos anteriores, copia exacta del inventario, selección, cancelar/confirmar eliminación individual y múltiple, facturas con URL firmada y persistencia tras recargar. Todo mediante API simulada.
+- browser_smoke: ocho anchos, navegación/recarga, galería por color, talla agotada, conservación de talla, carrito con color e imagen, loader, búsqueda y procesamiento de fotos.
+- pages_runtime_test: 15 comprobaciones con workerd nativo; no es un despliegue remoto.
+- Supabase real: esquema/bucket privados verificados; rol autenticado sin permiso ve cero facturas/archivos. check:live añade rechazo anon de facturas y listado del bucket.
+- Logs: artifacts/panel-colors-final.log, browser-colors-final.log, verify-colors-final.log, pages-colors-final.log. Capturas: artifacts/home-real-corregida-*.png y artifacts/screenshots/ficha-colores-390.png.
+
+No se crearon, editaron ni eliminaron productos reales. No se cargaron facturas reales. Login del propietario y subida real deben comprobarse con su sesión. Cloudflare remoto, distribución edge, WhatsApp/Facebook e iPhone/Instagram requieren validación tras configurar y desplegar los dos sitios.
+
+## Referencias revisadas
+
+- Nike Air Force 1: https://www.nike.com/t/air-force-1-07-mens-shoes-DZejrQoC/CW2288-111
+- Adidas Essentials Gloves: https://www.adidas.com.au/essentials-gloves/JV5747.html
+- Buckets privados: https://supabase.com/docs/guides/storage/buckets/fundamentals
+- Políticas Storage: https://supabase.com/docs/guides/storage/security/access-control
+
+Las páginas públicas muestran producto, galería y tallas. Su administración interna no es pública; el editor se diseñó para el flujo de Batting Shop.

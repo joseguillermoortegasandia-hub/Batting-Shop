@@ -594,12 +594,7 @@ dialog::backdrop {
   background:#fff
 }
 
-.csv-drop {
-  border:2px dashed #cbd5e1;
-  border-radius:16px;
-  padding:24px;
-  text-align:center
-}
+
 
 .preview-table {
   overflow:auto;
@@ -758,7 +753,7 @@ dialog::backdrop {
 @media(max-width:899px){.toast-region{right:10px;bottom:10px}}
 
 /* Cursor de bate y texto editable únicamente en campos de entrada. */
-html,body,body * {cursor:url('/assets/icons/bat-cursor-v3.png') 36 4,default !important;caret-color:transparent}
+html,body,body * {cursor:url('/assets/icons/bat-cursor-v4.cur') 41 6,url('/assets/icons/bat-cursor-v4.png') 41 6,default !important;caret-color:transparent}
 body {-webkit-user-select:none;user-select:none}
 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([disabled]):not([readonly]),textarea:not([disabled]):not([readonly]),[contenteditable="true"],[contenteditable="true"] * {cursor:text !important;caret-color:auto;-webkit-user-select:text;user-select:text}
 
@@ -788,3 +783,19 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="c
 dialog .toast-region{z-index:1002;bottom:20px}
 @media(max-width:620px){.product-stock-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:360px){.product-stock-fields{grid-template-columns:1fr}}
+
+.product-row strong,.product-row span{display:block;overflow-wrap:anywhere}
+.product-row>div{min-width:0}
+.product-row>input[type=checkbox]{width:24px;height:24px;margin:10px;accent-color:var(--red);pointer-events:auto}
+.selection-toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:16px}
+.selection-toolbar label{display:flex;gap:8px;align-items:center;min-height:44px}
+.color-editor{border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:16px;min-width:0}
+.color-editor-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px}
+.color-editor-head h4{margin:0}
+.size-stock-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:12px;align-items:end;margin-top:12px}
+.color-editor .field{min-width:0}
+.invoice-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;margin-top:20px}
+.invoice-card{padding:16px;border:1px solid var(--line);border-radius:12px;background:white;min-width:0;overflow-wrap:anywhere}
+.invoice-card img{display:block;width:100%;height:180px;object-fit:contain;margin-bottom:12px}
+.invoice-card strong,.invoice-card span{display:block}
+@media(max-width:600px){.size-stock-row{grid-template-columns:repeat(2,minmax(0,1fr))}.color-editor{padding:12px}.color-editor-head{flex-wrap:wrap}}

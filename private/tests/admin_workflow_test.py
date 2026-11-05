@@ -40,12 +40,30 @@ def main():
       elif path=='/rest/v1/rpc/is_admin':body=authorized
       elif path.startswith('/storage/v1/object/'):
        if method=='GET':route.fulfill(body=(Path(td)/'test-photo.png').read_bytes(),content_type='image/png');return
-       assert method=='POST';body={'Key':path.rsplit('/',1)[-1]}
+       if method=='POST' and '/sign/' in path:body={'signedURL':'/object/sign/purchase-invoices/test.png?token=test'}
+       elif method=='DELETE':body=[]
+       else:
+        assert method=='POST';body={'Key':path.rsplit('/',1)[-1]}
       elif path.startswith('/rest/v1/'):
        table=path.rsplit('/',1)[-1]
        if table=='admin_users':rows=[{'user_id':user_id,'role':'owner'}] if authorized else []
        elif table=='categories':rows=[category,{**category,'id':'20000000-0000-4000-8000-000000000002','name':'Guantines','slug':'guantines','variant_mode':'color_size'}]
        else:rows=db.get(table,[])
+       from urllib.parse import parse_qs
+       query=parse_qs(url.query)
+       if method in ['GET','PATCH','DELETE']:
+        for key,values in query.items():
+         value=values[0]
+         if value.startswith('eq.'):rows=[row for row in rows if str(row.get(key)).lower()==value[3:].lower()]
+         elif value.startswith('in.('):
+          allowed=value[4:-1].split(',');rows=[row for row in rows if str(row.get(key)) in allowed]
+       if method=='DELETE':
+        ids={row.get('id') for row in rows};variant_ids={v['id'] for v in db.get('product_variants',[]) if v['product_id'] in ids}
+        db[table]=[row for row in db.get(table,[]) if row not in rows]
+        if table=='products':
+         for related in ['product_colors','product_variants','product_images']:db[related]=[row for row in db.get(related,[]) if row['product_id'] not in ids]
+         db['inventory_private']=[row for row in db['inventory_private'] if row['variant_id'] not in variant_ids]
+        route.fulfill(json=rows);return
        if method=='PATCH' and table=='products' and data.get('status')=='published' and fail_publish[0]:
         fail_publish[0]=False;route.fulfill(status=503,json={'message':'Fallo simulado al publicar: vuelve a intentar.'});return
        if method=='POST':
@@ -118,7 +136,7 @@ def main():
       page.locator('#imageFiles').set_input_files(str(photo));page.locator('#uploadImages').click();page.wait_for_selector('.image-item')
       assert not db['products'] and not any(path.startswith('/storage/') for method,path in requests)
       assert page.locator('#editorPreview img').get_attribute('src').startswith('blob:')
-      assert 'bat-cursor-v3.png' in page.locator('#editorTitle').evaluate('(e)=>getComputedStyle(e).cursor')
+      assert 'bat-cursor-v4.cur' in page.locator('#editorTitle').evaluate('(e)=>getComputedStyle(e).cursor')
       assert page.locator('#fName').evaluate('(e)=>getComputedStyle(e).cursor')=='text'
       for width in [320,390,768,1366]:
        page.set_viewport_size({'width':width,'height':900})
@@ -156,9 +174,8 @@ def main():
       db['product_colors'].append(color2);db['product_variants'].append(variant2)
       db['inventory_private'].append({'variant_id':variant2['id'],'stock':0,'cost':None,'provider_sku':'legacy-sku','provider_source_url':'https://supplier.example/item'})
       page.get_by_role('button',name='Editar',exact=True).click();page.wait_for_selector('#productEditor[open]')
-      assert page.locator('.product-stock-fields').count()==1 and page.locator('#savedProductOption option').count()==2
-      page.locator('#savedProductOption').select_option('1')
-      assert page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Color')).first.locator('input').input_value()=='Negro'
+      assert page.locator('.color-editor').count()==2
+      assert page.locator('.color-editor').last.locator('input[type=text]').first.input_value()=='Negro'
       page.locator('#savePublish').click();page.wait_for_selector('#productEditor',state='hidden')
       assert len(db['product_variants'])==2 and len(db['inventory_private'])==2
       assert db['inventory_private'][1]['provider_sku']=='legacy-sku'
@@ -169,20 +186,57 @@ def main():
       db['inventory_private'][0].update(stock=3,cost=7)
       page.reload();page.wait_for_selector('#adminApp',state='visible');page.wait_for_function("document.querySelector('#metricDrafts').textContent==='1'")
       assert page.locator('#metricPublished').inner_text()=='1' and page.locator('#metricValue').inner_text()=='$21.00'
-      with page.expect_download() as download_info:
-       page.locator('#adminSidebar').get_by_role('button',name='Importar CSV',exact=True).click();page.locator('#downloadCsvTemplate').click()
-      download=download_info.value;csv=Path(download.path()).read_text(encoding='utf-8-sig')
-      assert not any(column in csv.splitlines()[0].split(',') for column in ['sale_price','provider_sku','provider_source_url'])
-      assert 'code,slug,name,brand,category' in csv and 'Franklin' not in csv and 'Producto de ejemplo' not in csv
-      page.locator('#csvFile').set_input_files(str(download.path()));page.wait_for_function("document.querySelector('#csvStatus').textContent.includes('no contiene productos')")
-      assert not page.locator('#confirmImport').is_visible()
-      for view in ['Dashboard','Productos','Inventario','Categorías','Importar CSV','Historial']:
+      # Varias tallas por color; detección de tono y foto asociada.
+      page.get_by_role('button',name='Productos',exact=True).click();page.get_by_role('button',name='Editar',exact=True).first.click();page.wait_for_selector('#productEditor[open]')
+      page.locator('#fCategory').select_option('20000000-0000-4000-8000-000000000002')
+      for group in page.locator('.color-editor').all():group.locator('.size-stock-row input[type=text]').fill('M')
+      page.locator('.color-editor').first.get_by_role('button',name='Agregar talla',exact=True).click()
+      page.locator('.color-editor').first.locator('.size-stock-row').last.locator('input[type=text]').fill('L')
+      page.locator('#addProductColor').click();group=page.locator('.color-editor').last
+      group.locator('.product-stock-fields input[type=text]').fill('Azul')
+      assert group.locator('input[type=color]').input_value()=='#2563eb'
+      group.locator('input[type=color]').fill('#123abc');assert group.locator('input[type=color]').input_value()=='#123abc'
+      group.locator('.size-stock-row input[type=text]').fill('S')
+      group.locator('.size-stock-row .field').filter(has=page.locator('label',has_text='Stock')).locator('input').fill('2')
+      page.locator('#imageColor').select_option('Azul');page.locator('#imageFiles').set_input_files(str(photo));page.locator('#uploadImages').click();page.wait_for_function("document.querySelectorAll('.image-item').length===2")
+      page.locator('#savePublish').click();page.wait_for_selector('#productEditor',state='hidden')
+      assert len(db['product_variants'])==4 and len(db['product_colors'])==3
+      # Duplicar conserva todos los datos de negocio, salvo identidades y URL únicas.
+      original=db['products'][0].copy();page.get_by_role('button',name='Duplicar',exact=True).first.click()
+      page.wait_for_function("document.querySelectorAll('#productList .product-row').length===3")
+      duplicate=db['products'][-1]
+      assert duplicate['name']==original['name'] and duplicate['code']!=original['code'] and duplicate['slug']!=original['slug']
+      for table in ['product_colors','product_variants','product_images']:
+       assert len([row for row in db[table] if row['product_id']==duplicate['id']])==len([row for row in db[table] if row['product_id']==original['id']])
+      assert duplicate['max_order_quantity']==original['max_order_quantity'] and duplicate['status']==original['status']
+      def stock_signature(product_id):
+       return sorted((next(c['name'] for c in db['product_colors'] if c['id']==v['color_id']),v.get('size_label') or '',next(i['stock'] for i in db['inventory_private'] if i['variant_id']==v['id']),next(i.get('cost') for i in db['inventory_private'] if i['variant_id']==v['id'])) for v in db['product_variants'] if v['product_id']==product_id)
+      assert stock_signature(duplicate['id'])==stock_signature(original['id'])
+      original_photos={r['storage_path'] for r in db['product_images'] if r['product_id']==original['id']}
+      assert original_photos=={r['storage_path'] for r in db['product_images'] if r['product_id']==duplicate['id']}
+      # Selección real, cancelar y confirmar eliminación individual y múltiple.
+      page.locator('#productList input[type=checkbox]').first.check();assert page.locator('#selectedCount').inner_text()=='1 seleccionados'
+      page.get_by_role('button',name='Eliminar',exact=True).last.click();page.get_by_role('button',name='Cancelar',exact=True).click();assert len(db['products'])==3
+      page.get_by_role('button',name='Eliminar',exact=True).last.click();page.locator('#confirmAccept').click();page.wait_for_function("document.querySelectorAll('#productList .product-row').length===2")
+      page.locator('#selectAllProducts').check();assert page.locator('#selectedCount').inner_text()=='2 seleccionados'
+      page.locator('#deleteSelectedProducts').click();page.locator('#confirmAccept').click();page.wait_for_function("document.querySelectorAll('#productList .product-row').length===0")
+      assert not db['products'] and not db['product_variants']
+      assert not any(method=='DELETE' and '/product-images' in path for method,path in requests)
+      # Facturas privadas: imagen, número y nombre, persistencia tras recargar.
+      page.locator('#adminSidebar').get_by_role('button',name='Facturas',exact=True).click()
+      assert page.get_by_text('Importar CSV',exact=True).count()==0
+      page.locator('#invoiceName').fill('Compra de prueba');page.locator('#invoiceNumber').fill('LOCAL-001');page.locator('#invoiceFile').set_input_files(str(photo));page.locator('#saveInvoice').click()
+      page.wait_for_selector('.invoice-card');assert len(db['purchase_invoices'])==1
+      assert db['purchase_invoices'][0]['name']=='Compra de prueba' and db['purchase_invoices'][0]['invoice_number']=='LOCAL-001'
+      assert '/object/sign/purchase-invoices/' in page.locator('.invoice-card a').get_attribute('href')
+      page.reload();page.wait_for_selector('#adminApp',state='visible');page.locator('#adminSidebar').get_by_role('button',name='Facturas',exact=True).click();page.wait_for_selector('.invoice-card')
+      for view in ['Dashboard','Productos','Inventario','Categorías','Facturas','Historial']:
        page.locator('#adminSidebar').get_by_role('button',name=view,exact=True).click()
-       assert 'bat-cursor-v3.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor')
-      page.reload();page.wait_for_selector('#adminApp',state='visible');assert 'bat-cursor-v3.png' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor')
+       assert 'bat-cursor-v4.cur' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor')
+      page.reload();page.wait_for_selector('#adminApp',state='visible');assert 'bat-cursor-v4.cur' in page.locator('body').evaluate('(e)=>getComputedStyle(e).cursor')
       assert not errors,errors
       page.screenshot(path=str(ROOT/'artifacts/panel-dashboard-test.png'),full_page=True)
-      print('PASS formulario único, talla opcional, errores sobre modal (320px), reintento sin duplicados, conservación de registros antiguos, fotos y publicación (API simulada)',flush=True)
+      print('PASS panel: colores/tallas/fotos, tono automático, publicación y reintento, duplicación completa, selección, eliminación individual/múltiple y facturas privadas (API simulada)',flush=True)
      context.close()
     browser.close()
   finally:server.shutdown();server.server_close();thread.join()
