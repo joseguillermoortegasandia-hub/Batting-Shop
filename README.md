@@ -171,7 +171,7 @@ Fuentes: [Routing de Pages](https://developers.cloudflare.com/pages/functions/ro
 
 El panel reúne información, colores/tallas, stock, fotos y vista previa en un solo formulario. Publicar producto guarda las imágenes preparadas y publica al terminar; no hay selector de estado ni botón de borrador. Cada color agrupa fotos y tallas con su stock. Facturas sustituye la antigua importación CSV.
 
-Cada producto permite una unidad o varias (hasta 99) por pedido. La ficha y el carrito comparten el límite entre variantes. Aplicar `20261104141323_product_order_quantity.sql` después de las migraciones anteriores; su rollback está en `private/supabase/rollback/`. No agrega productos. Detalles y límites de la prueba en `private/docs/UNIFIED_PRODUCT_EDITOR.md`.
+Cada producto permite una unidad o varias (hasta 99) por pedido. La ficha y el carrito comparten el límite entre variantes y restringen cada combinación al stock disponible. Aplicar `20261104141323_product_order_quantity.sql` después de las migraciones anteriores; su rollback está en `private/supabase/rollback/`. No agrega productos. Detalles y límites de la prueba en `private/docs/UNIFIED_PRODUCT_EDITOR.md`.
 
 El editor agrupa los colores, las fotos y las tallas con su stock, con precio general. Los errores de publicación permanecen visibles dentro del formulario. El cursor de bate de 48 px en formato nativo CUR con PNG de respaldo se comparte entre tienda y panel; el cursor de texto se reserva para los campos editables.
 
@@ -201,3 +201,12 @@ En el editor, **Agregar color** crea un grupo. **Agregar talla** añade stock y 
 La duplicación conserva datos y estado; se publica inmediatamente si el original estaba publicado. Cada copia necesita IDs, código y slug propios. Las fotos comparten archivos con registros independientes: borrar una copia o quitar su foto no elimina archivos usados por el original. La limpieza física de archivos huérfanos queda pendiente de una operación separada de mantenimiento.
 
 Las facturas se consultan únicamente en el panel, con URLs firmadas temporales. No aparecen en el catálogo ni se incluyen sus imágenes en los ZIP. Cambiar de sección Facturas renueva sus enlaces.
+
+
+## Portada y límites por inventario
+
+La migración `20261105031159_stock_limits_home_cover.sql` añade la casilla **Mostrar en la portada de inicio** y el límite público de compra por variante. Aplica después de las migraciones anteriores. El límite de compra es el menor entre stock y máximo del producto. Los costos y datos de proveedor quedan en inventario privado.
+
+La portada muestra un producto marcado y disponible a la vez y cambia cada tres segundos. El enlace abre la ficha. Incluye pausa y respeta el ajuste de movimiento reducido. El logo se muestra hasta que haya un producto disponible marcado para portada.
+
+La ficha presenta descripción abierta y la tabla de la marca cuando existen tallas y hay una guía disponible. Reutiliza el catálogo de la sesión mientras esté fresco y usa miniaturas en la portada, tarjetas y galería de miniaturas.

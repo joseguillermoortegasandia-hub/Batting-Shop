@@ -37,19 +37,19 @@ def main():
    def __init__(self,*args,**kwargs):super().__init__(*args,directory=str(panel_dir),**kwargs)
    def log_message(self,*args):pass
   panel_server=Server(('127.0.0.1',0),PanelHandler);panel_thread=threading.Thread(target=panel_server.serve_forever,daemon=True);panel_thread.start();panel_origin=f'http://127.0.0.1:{panel_server.server_port}'
-  state={'mode':'ok','price':29.99,'available':True,'calls':0,'limit':99}
+  state={'mode':'ok','price':29.99,'available':True,'calls':0,'limit':99,'stock':99}
   def route_rpc(route):
    state['calls']+=1;name=route.request.url.rsplit('/',1)[-1];args=route.request.post_data_json or {};data=None
    if state['mode']=='error':route.fulfill(status=503,json={'message':'offline'},headers={'Access-Control-Allow-Origin':'*'});return
    if name=='get_public_catalog':data={'categories':[],'products':[]} if state['mode']=='empty' else CATALOG
    elif name=='get_public_product':
-    found=next((p for p in PRODUCTS if p['slug']==args['p_slug']),None);data={**found,'maxQuantity':state['limit']} if found else None
+    found=next((p for p in PRODUCTS if p['slug']==args['p_slug']),None);data={**found,'maxQuantity':state['limit'],'variants':[{**variant,'maxAvailableQuantity':state['stock']} for variant in found['variants']]} if found else None
    elif name=='get_related_products':data=[p for p in PRODUCTS if p['id']!=args['p_product_id']]
-   elif name=='get_public_cart_state':data=[dict(variantId=uuid(20),productId=PRODUCTS[0]['id'],maxQuantity=state['limit'],slug=ITEM['slug'],name=ITEM['name'],available=state['available'],price=state['price'],options=ITEM['options'],imagePath=ITEM['image'])] if uuid(20) in args['p_variant_ids'] else []
+   elif name=='get_public_cart_state':data=[dict(variantId=uuid(20),productId=PRODUCTS[0]['id'],maxQuantity=state['limit'],maxAvailableQuantity=state['stock'],slug=ITEM['slug'],name=ITEM['name'],available=state['available'],price=state['price'],options=ITEM['options'],imagePath=ITEM['image'])] if uuid(20) in args['p_variant_ids'] else []
    if name=='get_public_cart_state':
     for color in PRODUCTS[0].get('colors',[]):
      for variant in color['variants']:
-      if variant['id'] in args['p_variant_ids']:data.append(dict(variantId=variant['id'],productId=PRODUCTS[0]['id'],maxQuantity=state['limit'],slug=PRODUCTS[0]['slug'],name=PRODUCTS[0]['name'],available=variant['available'],price=state['price'],options=[dict(label='Color',value=color['label']),dict(label='Talla',value=variant['sizeLabel'])],imagePath=color['images'][0]['storagePath']))
+      if variant['id'] in args['p_variant_ids']:data.append(dict(variantId=variant['id'],productId=PRODUCTS[0]['id'],maxQuantity=state['limit'],slug=PRODUCTS[0]['slug'],name=PRODUCTS[0]['name'],available=variant['available'],maxAvailableQuantity=variant['maxAvailableQuantity'],price=state['price'],options=[dict(label='Color',value=color['label']),dict(label='Talla',value=variant['sizeLabel'])],imagePath=color['images'][0]['storagePath']))
    route.fulfill(json=data,headers={'Access-Control-Allow-Origin':'*'})
   def inspect(page,label):
    result=page.evaluate('''()=>{const visible=e=>!!(e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden'&&e.closest('[aria-hidden="true"]')===null);return {
@@ -126,18 +126,50 @@ def main():
     original_product=copy.deepcopy(PRODUCTS[0])
     colors=[]
     for index,(name,hexcode,sizes) in enumerate([('Azul','#2563eb',[('M',True),('L',False)]),('Rojo','#dc2626',[('S',True),('M',True)]),('Negro','#111111',[('M',False)])]):
-     colors.append(dict(id=uuid(70+index),name=name,label=name,hex=hexcode,images=[dict(storagePath=f'/assets/images/logo.webp?color={name}&foto={photo}',alt=f'{name} {photo}',width=3000,height=3000) for photo in [1,2]],variants=[dict(id=uuid(80+index*3+j),available=available,sizeLabel=size,normalizedSize=size) for j,(size,available) in enumerate(sizes)]))
-    PRODUCTS[0]['colors']=colors;PRODUCTS[0]['variants']=[]
+     colors.append(dict(id=uuid(70+index),name=name,label=name,hex=hexcode,images=[dict(storagePath=f'/assets/images/logo.webp?color={name}&foto={photo}',alt=f'{name} {photo}',width=3000,height=3000) for photo in [1,2]],variants=[dict(id=uuid(80+index*3+j),available=available,maxAvailableQuantity=(2 if available else 0),sizeLabel=size,normalizedSize=size) for j,(size,available) in enumerate(sizes)]))
+    PRODUCTS[0]['colors']=colors;PRODUCTS[0]['variants']=[];PRODUCTS[0]['brand']='Adidas'
     context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/producto/guante-franklin/');page.wait_for_selector('#colorOptions button')
     check('Galería inicial azul y dos fotos','color=Azul' in page.locator('#mainProductImage').get_attribute('src') and page.locator('#thumbs button').count()==2)
+    page.wait_for_selector('#productSizeGuide .size-table')
+    check('Guía de la marca en la ficha','Adidas' in page.locator('#productGuideTitle').inner_text() and 'Adizero' in page.locator('#productGuideContent').inner_text())
+    check('Descripción visible sin desplegable',page.locator('#productDescription').is_visible() and page.locator('#productDescription').locator('xpath=ancestor::details').count()==0)
+    check('Sin envíos y pagos en la ficha',page.get_by_text('Envíos y pagos',exact=True).count()==0)
     check('Talla sin stock deshabilitada',page.locator('#sizeOptions').get_by_role('button',name='L agotado',exact=True).is_disabled())
     page.locator('#colorOptions').get_by_role('button',name='Rojo disponible',exact=True).click()
     check('Cambiar color cambia fotos y conserva talla M','color=Rojo' in page.locator('#mainProductImage').get_attribute('src') and page.locator('#sizeOptions .active').inner_text()=='M')
     page.locator('#thumbs button').last.click();check('Segunda foto del color seleccionado','foto=2' in page.locator('#mainProductImage').get_attribute('src'))
-    page.locator('#addOrder').click();check('Carrito conserva color y talla',page.evaluate("()=>{const item=BattingCart.read()[0];return item.options.some(o=>o.value==='Rojo')&&item.options.some(o=>o.value==='M')&&item.image.includes('color=Rojo')}") )
+    page.locator('#productQuantity').fill('17')
+    check('Ficha limita a dos unidades de la combinación',page.locator('#productQuantity').get_attribute('max')=='2')
+    page.locator('#addOrder').click();page.wait_for_selector('.cart-item')
+    check('Carrito limita al stock y bloquea sumar',page.evaluate('BattingCart.read()[0].qty')==2 and page.locator('.cart-item .qty-control button').last.is_disabled())
+    check('Carrito conserva color y talla',page.evaluate("()=>{const item=BattingCart.read()[0];return item.options.some(o=>o.value==='Rojo')&&item.options.some(o=>o.value==='M')&&item.image.includes('color=Rojo')}") )
     page.locator('[data-close-cart]').click()
     page.locator('#colorOptions').get_by_role('button',name='Negro agotado',exact=True).click();check('Color agotado permite ver fotos sin comprar','color=Negro' in page.locator('#mainProductImage').get_attribute('src') and page.locator('#addOrder').is_disabled())
     page.screenshot(path=str(OUT/'ficha-colores-390.png'),full_page=True);context.close();PRODUCTS[0]=original_product
+    # Un descenso de stock reduce el pedido y conserva la validación.
+    state['stock']=3
+    context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/producto/guante-franklin/')
+    page.wait_for_selector('#productQuantity')
+    check('Ficha sin tallas oculta guía y selector',not page.locator('#productSizeGuide').is_visible() and not page.locator('#sizeOptionWrap').is_visible())
+    page.locator('#productQuantity').fill('3');page.locator('#addOrder').click();page.wait_for_selector('.cart-item')
+    state['stock']=1
+    page.evaluate('BattingCart.render({revalidate:true})')
+    check('Revalidación reduce cantidad al nuevo stock',page.evaluate('BattingCart.read()[0].qty')==1)
+    state['stock']=99;context.close()
+    # Rotación, enlaces y reutilización del catálogo de la sesión.
+    CATALOG['products'][0]['showOnCover']=True;CATALOG['products'][1]['showOnCover']=True
+    context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page()
+    page.goto(origin+'/');page.wait_for_selector('#heroVisual .cover-float');cover=page.locator('#heroVisual .cover-float')
+    first=cover.get_attribute('href');page.wait_for_function("(first)=>document.querySelector('.cover-float').getAttribute('href')!==first",arg=first,timeout=5000)
+    check('Portada rota a otro producto cada 3 segundos',cover.get_attribute('href')=='/producto/pelota-softball/')
+    check('Portada flotante visible en móvil',cover.is_visible() and cover.evaluate('(e)=>getComputedStyle(e).animationName')=='cover-hover')
+    page.locator('.cover-control').click()
+    check('Portada tiene control de pausa',page.locator('.cover-control').inner_text()=='Reproducir')
+    calls=state['calls'];cover.click();page.wait_for_selector('#addOrder')
+    check('Portada abre el producto mostrado','/producto/pelota-softball/' in page.url)
+    check('Ficha reutiliza catálogo sin llamadas RPC adicionales',state['calls']==calls)
+    context.close()
+    for row in CATALOG['products']:row.pop('showOnCover',None)
     # Estados y tiempos del loader sin tocar dependencias ni fuentes.
     context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/');page.wait_for_selector('.product-card')
     timing=page.evaluate("""async()=>{

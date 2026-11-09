@@ -110,6 +110,7 @@ def main():
       assert page.locator('.editor-tabs, #fStatus, #saveDraft').count()==0
       assert page.locator('#imageFiles').is_visible()
       page.locator('#fMaxQuantity').select_option('1')
+      page.locator('#fShowOnCover').check()
       assert page.locator('.product-stock-fields').count()==1
       assert page.locator('#imageColor').is_disabled() and page.locator('#uploadImages').is_disabled()
       assert page.locator('#addVariant, .variant-help, .variant-heading, .variant-row').count()==0
@@ -167,6 +168,7 @@ def main():
       assert page.locator('#metricValue').inner_text()=='$10.00'
       assert db['product_colors'][0]['name']=='Blanco'
       page.get_by_role('button',name='Productos',exact=True).click();page.get_by_role('button',name='Editar',exact=True).click();page.wait_for_selector('#productEditor[open]')
+      assert page.locator('#fShowOnCover').is_checked() and db['products'][0]['show_on_cover'] is True
       assert page.locator('#fMaxQuantity').input_value()=='1';page.locator('#closeEditor').click()
       # Compatibilidad: las presentaciones antiguas no se borran al simplificar el editor.
       color2={**db['product_colors'][0],'id':str(uuid.uuid4()),'name':'Negro','display_name':'Negro'}
@@ -208,7 +210,7 @@ def main():
       assert duplicate['name']==original['name'] and duplicate['code']!=original['code'] and duplicate['slug']!=original['slug']
       for table in ['product_colors','product_variants','product_images']:
        assert len([row for row in db[table] if row['product_id']==duplicate['id']])==len([row for row in db[table] if row['product_id']==original['id']])
-      assert duplicate['max_order_quantity']==original['max_order_quantity'] and duplicate['status']==original['status']
+      assert duplicate['max_order_quantity']==original['max_order_quantity'] and duplicate['status']==original['status'] and duplicate['show_on_cover']==original['show_on_cover']
       def stock_signature(product_id):
        return sorted((next(c['name'] for c in db['product_colors'] if c['id']==v['color_id']),v.get('size_label') or '',next(i['stock'] for i in db['inventory_private'] if i['variant_id']==v['id']),next(i.get('cost') for i in db['inventory_private'] if i['variant_id']==v['id'])) for v in db['product_variants'] if v['product_id']==product_id)
       assert stock_signature(duplicate['id'])==stock_signature(original['id'])
