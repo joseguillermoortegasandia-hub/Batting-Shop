@@ -1781,7 +1781,7 @@ button{min-width:40px}
 [hidden]{display:none!important}
 
 /* Cursor de bate y texto editable únicamente en campos de entrada. */
-html,body,body * {cursor:url('/assets/icons/bat-cursor-v4.cur') 41 6,url('/assets/icons/bat-cursor-v4.png') 41 6,default !important;caret-color:transparent}
+html,body,body * {cursor:url('/assets/icons/bat-cursor-v4.cur') 24 24,url('/assets/icons/bat-cursor-v4.png') 24 24,default !important;caret-color:transparent}
 body {-webkit-user-select:none;user-select:none}
 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="color"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([disabled]):not([readonly]),textarea:not([disabled]):not([readonly]),[contenteditable="true"],[contenteditable="true"] * {cursor:text !important;caret-color:auto;-webkit-user-select:text;user-select:text}
 

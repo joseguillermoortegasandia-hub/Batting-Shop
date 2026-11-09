@@ -223,7 +223,13 @@ def main():
       assert page.locator('.category-order').first.bounding_box()['height']>=44
       page.locator('#adminSidebar').get_by_role('button',name='Productos',exact=True).click()
       # Selección real, cancelar y confirmar eliminación individual y múltiple.
-      page.locator('#productList input[type=checkbox]').first.check();assert page.locator('#selectedCount').inner_text()=='1 seleccionados'
+      selection=page.locator('#productList .product-selection').first
+      selection.locator('img').click()
+      assert selection.locator('input').is_checked()
+      selection.locator('strong').click()
+      assert not selection.locator('input').is_checked()
+      selection.locator('strong').click()
+      assert page.locator('#selectedCount').inner_text()=='1 seleccionados'
       page.get_by_role('button',name='Eliminar',exact=True).last.click();page.get_by_role('button',name='Cancelar',exact=True).click();assert len(db['products'])==3
       page.get_by_role('button',name='Eliminar',exact=True).last.click();page.locator('#confirmAccept').click();page.wait_for_function("document.querySelectorAll('#productList .product-row').length===2")
       page.locator('#selectAllProducts').check();assert page.locator('#selectedCount').inner_text()=='2 seleccionados'

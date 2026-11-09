@@ -31,7 +31,7 @@ El panel muestra URLs firmadas de cinco minutos, que se renuevan al entrar en Fa
 
 La portada utiliza columnas minmax(0,fr), limita fotos a su contenedor y evita que el tamaño intrínseco de una foto de producto agrande la página. Se comprobó con el catálogo real: escritorio a 1366 y 1920 px, portada de 380 px, imágenes de 242 px y sin desbordamiento.
 
-El bate original transparente se empaqueta conservando proporciones y margen en un cursor nativo CUR de 48×48 con PNG de respaldo. Hotspot 41,6. Los campos editables conservan el cursor de texto. Ambos builds versionan CSS/JS y cursor por contenido para evitar caché antigua. El tamaño visual final también depende de la escala de pantalla y del sistema operativo.
+El bate original transparente se empaqueta conservando proporciones y margen en un cursor nativo CUR de 48×48 con PNG de respaldo. El punto de clic está en el centro (24,24). En Productos, la casilla, la foto y los datos forman una sola zona de selección. Los campos editables conservan el cursor de texto. Ambos builds versionan CSS/JS y cursor por contenido para evitar caché antigua. El tamaño visual final también depende de la escala de pantalla y del sistema operativo.
 
 ## Pruebas
 
