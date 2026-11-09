@@ -7,6 +7,12 @@ export async function fingerprintAssets(root){
  const files=[];
  async function walk(directory){for(const entry of await readdir(directory,{withFileTypes:true})){const path=join(directory,entry.name);if(entry.isDirectory())await walk(path);else files.push(path)}}
  await walk(root);
+ // Normalize copied assets too, including vendor scripts and Cloudflare headers.
+ for(const path of files.filter(path=>/(?:[\\/]_headers|\.js)$/.test(path))){
+  const source=await readFile(path,'utf8');
+  const normalized=source.replace(/\r\n/g,'\n');
+  if(normalized!==source)await writeFile(path,normalized);
+ }
  for(const cursor of files.filter(path=>/bat-cursor-v4\.(png|cur)$/.test(path))){
   const version=createHash('sha256').update(await readFile(cursor)).digest('hex').slice(0,12);
   const url='/'+relative(root,cursor).replaceAll('\\','/');

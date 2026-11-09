@@ -32,6 +32,8 @@ def main():
   panel_dir=Path(td)/'panel'
   panel_env={**env,'BS_PANEL_OUTPUT_DIR':panel_dir.relative_to(ROOT).as_posix(),'PANEL_URL':'http://localhost:8081','STOREFRONT_URL':origin}
   subprocess.run(['node','build-panel.mjs'],cwd=ROOT,env=panel_env,check=True)
+  for output in [Path(td)/'store',panel_dir]:
+   check(f'{output.name} _headers y JS en LF',all(b'\r\n' not in path.read_bytes() for path in [output/'_headers',*output.rglob('*.js')]))
   class PanelHandler(SimpleHTTPRequestHandler):
    protocol_version='HTTP/1.1'
    def __init__(self,*args,**kwargs):super().__init__(*args,directory=str(panel_dir),**kwargs)
@@ -84,6 +86,31 @@ def main():
      page.evaluate('BattingUI.closeDrawer("#cartDrawer");BattingFavorites.save(["guante-franklin"])');page.goto(origin+'/favoritos.html');page.wait_for_selector('.product-card');inspect(page,f'{width} favoritos');shot(page,width,'favoritos')
      page.evaluate('async()=>{await BattingUI.renderCategorySheet();BattingUI.openDrawer("#categorySheet")}');inspect(page,f'{width} categorias');shot(page,width,'categorias');page.keyboard.press('Escape')
      matches=page.evaluate('async()=>{const b=await BattingData.loadCatalogBundle();return b.products.filter(p=>BattingData.matchesSearch(p,"guante")).map(p=>p.category.slug)}');check(f'{width} guante solo guantines',matches==['guantines'],str(matches));check(f'{width} sin errores JS',not errors,str(errors));context.close()
+    # Recommendations must use the catalogue sizing and overflow only inside their row.
+    for width,touch in [(390,True),(768,True),(1366,False)]:
+     context=browser.new_context(viewport={'width':width,'height':900},has_touch=touch)
+     context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc)
+     context.route('**/rpc/get_related_products',lambda route:route.fulfill(json=[{**PRODUCTS[1],'slug':f'recomendado-{i}','name':f'Recomendado {i}'} for i in range(8)]))
+     page=context.new_page()
+     page.goto(origin+'/producto/guante-franklin/')
+     page.wait_for_selector('#relatedGrid .product-card')
+     card_width=page.locator('#relatedGrid .product-card').first.bounding_box()['width']
+     grid_width=page.locator('#relatedGrid').bounding_box()['width']
+     check(f'{width} recomendados compactos',card_width<=grid_width/(5 if width>=1180 else 3 if width>=760 else 2))
+     check(f'{width} sin desborde de página',page.evaluate('document.documentElement.scrollWidth<=innerWidth+1'))
+     check(f'{width} flechas según dispositivo',page.locator('#relatedNext').is_visible()==(not touch))
+     if touch:page.locator('#relatedGrid').evaluate('(grid)=>{grid.scrollLeft=grid.scrollWidth}')
+     else:page.locator('#relatedNext').click()
+     page.wait_for_function("document.querySelector('#relatedGrid').scrollLeft>0")
+     if width==390:
+      state['available']=False
+      page.evaluate('(item)=>{BattingCart.write([item]);BattingUI.openDrawer("#cartDrawer");return BattingCart.render({revalidate:true})}',ITEM)
+      check('Carrito vacío conserva aviso de agotado',page.locator('#cartNotice').is_visible() and 'se agotó' in page.locator('#cartNotice').inner_text() and page.locator('#cartItems .empty-state').is_visible())
+      state['available']=True
+      page.goto(origin+'/favoritos.html')
+      check('Favoritos vacío ocupa todo el ancho',abs(page.locator('#favoritesGrid .coming-soon').bounding_box()['width']-page.locator('#favoritesGrid').bounding_box()['width'])<1)
+      check('Búsqueda acepta plurales y guantines',page.evaluate("""()=>['guante','guantes','guantin','guantines'].every(q=>BattingData.matchesSearch({name:'CFX Pro',category:{slug:'guantines',searchKeywords:[]}},q)) && BattingData.matchesSearch({name:'Protector'},'protectores') && !BattingData.matchesSearch({name:'Pelota'},'guantes')"""))
+     context.close()
     # Guías de las cuatro marcas: tablas visibles, sin avisos ni enlaces externos.
     context=browser.new_context();context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page()
     for width in [320,390,768,1366]:

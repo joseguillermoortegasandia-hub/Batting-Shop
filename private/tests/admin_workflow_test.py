@@ -216,6 +216,12 @@ def main():
       assert stock_signature(duplicate['id'])==stock_signature(original['id'])
       original_photos={r['storage_path'] for r in db['product_images'] if r['product_id']==original['id']}
       assert original_photos=={r['storage_path'] for r in db['product_images'] if r['product_id']==duplicate['id']}
+      assert page.locator('.product-row-info').first.evaluate("(info)=>{const [name,meta,state]=info.children;return name.offsetTop<meta.offsetTop&&meta.offsetTop<state.offsetTop}")
+      page.locator('#adminSidebar').get_by_role('button',name='Categorías',exact=True).click()
+      assert page.locator('.category-row-info').first.evaluate("(info)=>info.children[0].offsetTop<info.children[1].offsetTop")
+      assert all(mode not in page.locator('#categoryList').inner_text() for mode in ['color_only','color_size','single','size_only'])
+      assert page.locator('.category-order').first.bounding_box()['height']>=44
+      page.locator('#adminSidebar').get_by_role('button',name='Productos',exact=True).click()
       # Selección real, cancelar y confirmar eliminación individual y múltiple.
       page.locator('#productList input[type=checkbox]').first.check();assert page.locator('#selectedCount').inner_text()=='1 seleccionados'
       page.get_by_role('button',name='Eliminar',exact=True).last.click();page.get_by_role('button',name='Cancelar',exact=True).click();assert len(db['products'])==3
@@ -227,6 +233,12 @@ def main():
       # Facturas privadas: imagen, número y nombre, persistencia tras recargar.
       page.locator('#adminSidebar').get_by_role('button',name='Facturas',exact=True).click()
       assert page.get_by_text('Importar CSV',exact=True).count()==0
+      for width in [320,390]:
+       page.set_viewport_size({'width':width,'height':800})
+       assert page.locator('#pickInvoiceFile').is_visible()
+       assert page.locator('#pickInvoiceFile').inner_text()=='Seleccionar archivo'
+       assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+      page.set_viewport_size({'width':1366,'height':900})
       page.locator('#invoiceName').fill('Compra de prueba');page.locator('#invoiceNumber').fill('LOCAL-001');page.locator('#invoiceFile').set_input_files(str(photo));page.locator('#saveInvoice').click()
       page.wait_for_selector('.invoice-card');assert len(db['purchase_invoices'])==1
       assert db['purchase_invoices'][0]['name']=='Compra de prueba' and db['purchase_invoices'][0]['invoice_number']=='LOCAL-001'

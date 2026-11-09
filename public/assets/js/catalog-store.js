@@ -80,7 +80,20 @@
   function variantOptionSummary(product,variant,color){const out=[];if(color)out.push({label:'Color',value:colorDisplay(color)});if(variant?.sizeLabel&&variant?.normalizedSize!=='ONE')out.push({label:product?.category?.optionLabel||'Talla',value:String(variant.sizeLabel)});for(const attr of product?.category?.attributes||[]){if(attr.scope!=='variant')continue;const value=variant?.attributes?.[attr.key];if(value===undefined||value===null||value==='')continue;out.push({label:attr.label,value:attributeDisplayValue(product.category,attr.key,value)})}return out}
   function cardAttributes(product){return (product?.category?.attributes||[]).filter(a=>a.scope==='product'&&a.showInCard).map(a=>({label:a.label,value:attributeDisplayValue(product.category,a.key,product?.attributes?.[a.key])})).filter(x=>x.value)}
   function searchText(product){const colors=(product.colors||[]).flatMap(c=>[c.name,c.label]);const sizes=allVariants(product).flatMap(v=>[v.sizeLabel,v.normalizedSize,...flattenAttributeValues(v.attributes)]);const attrs=flattenAttributeValues(product.attributes);const categoryTerms=[categorySlug(product),categoryName(product),...(product.category?.searchKeywords||[])];return normalizeText([product.name,product.brand,product.description,...colors,...sizes,...attrs,...categoryTerms].filter(Boolean).join(' '))}
-  function matchesSearch(product,query){const q=normalizeText(query);if(!q)return true;const haystack=searchText(product);return q.split(/\s+/).every(token=>haystack.includes(token))}
+  function searchWords(text){
+    return normalizeText(text).split(/\s+/).filter(Boolean)
+      .map(word=>/^(guantes?|guantin(?:es)?)$/.test(word)?'guante':word);
+  }
+  function matchesSearch(product,query){
+    const tokens=searchWords(query);
+    if(!tokens.length)return true;
+    const words=searchWords(searchText(product));
+    const haystack=words.join(' ');
+    const exact=new Set(words);
+    return tokens.every(token=>haystack.includes(token)||
+      (token.length>3&&token.endsWith('s')&&exact.has(token.slice(0,-1)))||
+      (token.length>4&&token.endsWith('es')&&exact.has(token.slice(0,-2))));
+  }
   function categoryBySlug(categories,slug){return (categories||[]).find(c=>c.slug===slug)||null}
 
   window.BattingData={configured,getClient,loadCatalogBundle,loadProduct,loadRelated,revalidateCart,catalogCacheState,productCacheState,normalizeText,matchesSearch,searchText,storageUrl,productUrl,categoryUrl,isKnownPrice,formatPrice,variantPrice,listingPrice,firstAvailableColor,firstProductImage,isAvailable,allVariants,categorySlug,categoryName,categoryBySlug,categoryAttribute,productAttribute,attributeDisplayValue,variantOptionSummary,cardAttributes,colorDisplay};

@@ -76,6 +76,35 @@
   renderAll();
   qs('.product-layout').hidden=false;
   qs('.product-details').hidden=false;
-  try{const related=await window.BattingData.loadRelated(p.id,4),root=qs('#relatedGrid');root.replaceChildren();related.forEach(item=>root.append(productCard(item,{showTag:false})));if(!related.length)root.append(el('div',{class:'empty-state',text:'No hay productos relacionados disponibles ahora mismo.'}))}catch(error){console.warn('No se pudieron cargar relacionados.',error);qs('#relatedGrid').replaceChildren(el('div',{class:'empty-state',text:'Los productos relacionados no están disponibles ahora mismo.'}))}
+  const relatedGrid=qs('#relatedGrid');
+  try{
+    const related=await window.BattingData.loadRelated(p.id,10);
+    relatedGrid.replaceChildren();
+    for(const item of related)relatedGrid.append(productCard(item,{showTag:false}));
+    if(related.length)wireRelatedControls();
+    else relatedGrid.append(el('div',{class:'empty-state',text:'No hay productos relacionados disponibles ahora mismo.'}));
+  }catch(error){
+    console.warn('No se pudieron cargar relacionados.',error);
+    relatedGrid.replaceChildren(el('div',{class:'empty-state',text:'Los productos relacionados no están disponibles ahora mismo.'}));
+  }
+
+  function wireRelatedControls(){
+    const previous=qs('#relatedPrev'),next=qs('#relatedNext'),controls=qs('#relatedControls');
+    const sync=()=>{
+      const end=relatedGrid.scrollWidth-relatedGrid.clientWidth;
+      controls.hidden=end<=1;
+      previous.disabled=relatedGrid.scrollLeft<=1;
+      next.disabled=relatedGrid.scrollLeft>=end-1;
+    };
+    function scroll(direction){
+      const step=relatedGrid.firstElementChild.getBoundingClientRect().width+parseFloat(getComputedStyle(relatedGrid).columnGap);
+      relatedGrid.scrollBy({left:direction*step,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+    }
+    previous.addEventListener('click',()=>scroll(-1));
+    next.addEventListener('click',()=>scroll(1));
+    relatedGrid.addEventListener('scroll',sync,{passive:true});
+    new ResizeObserver(sync).observe(relatedGrid);
+    sync();
+  }
   function showError(message){document.title='Producto no disponible | Batting Shop';const root=qs('#productRoot');if(root)root.replaceChildren(el('section',{class:'coming-soon'},[el('h1',{text:'Producto no disponible'}),el('p',{text:message}),el('a',{class:'btn primary',href:'/catalogo.html',text:'Volver al catálogo'})]))}
 })();

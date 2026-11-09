@@ -289,6 +289,9 @@ img {
 }
 
 .text-link {
+  display:inline-flex;
+  align-items:center;
+  min-height:44px;
   border:0;
   background:none;
   color:var(--red);
@@ -310,6 +313,7 @@ img {
 }
 
 .chip {
+  flex:none;
   border:1px solid var(--line);
   background:#fff;
   border-radius:999px;
@@ -327,8 +331,10 @@ img {
 
 .product-grid {
   display:grid;
-  grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:11px
+  --product-columns:2;
+  --product-gap:11px;
+  grid-template-columns:repeat(var(--product-columns),minmax(0,1fr));
+  gap:var(--product-gap)
 }
 
 .product-card {
@@ -953,11 +959,27 @@ img {
   cursor:pointer
 }
 
-.related-grid {
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:10px
+/* Match the catalogue cards while letting the row scroll independently. */
+.product-grid.related-grid {
+  grid-template-columns:none;
+  grid-auto-flow:column;
+  grid-auto-columns:calc((100% - (var(--product-columns) - 1) * var(--product-gap)) / var(--product-columns));
+  overflow-x:auto;
+  scroll-snap-type:x mandatory;
+  scrollbar-width:none;
+  padding-block:2px 6px;
 }
+.related-grid > .product-card {scroll-snap-align:start}
+.related-grid > .empty-state {grid-column:1 / span var(--product-columns)}
+.related-controls {display:none;gap:8px}
+.related-controls button {width:44px;min-height:44px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.related-controls button:disabled {opacity:.4}
+@media(min-width:980px) and (hover:hover) and (pointer:fine){
+  .related-controls {display:flex}
+}
+#favoritesGrid > :is(.coming-soon,.empty-state){grid-column:1/-1;margin-inline:0}
+.cart-notice {margin:8px 14px 0;padding:10px;border-radius:10px;background:#fff3d6;color:#633e08;font-size:14px}
+
 
 .size-guide-card {
   background:#fff;
@@ -1038,16 +1060,13 @@ img {
 
 @media(min-width:760px) {
   .product-grid {
-    grid-template-columns:repeat(3,minmax(0,1fr))
+    --product-columns:3
   }
   .category-grid {
     grid-template-columns:repeat(5,1fr)
   }
   .benefits {
     grid-template-columns:repeat(4,1fr)
-  }
-  .related-grid {
-    grid-template-columns:repeat(3,1fr)
   }
   .footer-inner {
     grid-template-columns:1.3fr 1fr 1fr
@@ -1135,8 +1154,8 @@ img {
     font-size:34px
   }
   .product-grid {
-    grid-template-columns:repeat(4,minmax(0,1fr));
-    gap:15px
+    --product-columns:4;
+    --product-gap:15px
   }
   .product-layout {
     grid-template-columns:minmax(0,1fr) minmax(380px,.8fr);
@@ -1154,7 +1173,7 @@ img {
 
 @media(min-width:1180px) {
   .product-grid {
-    grid-template-columns:repeat(5,minmax(0,1fr))
+    --product-columns:5
   }
 }
 
