@@ -353,39 +353,46 @@
       ]
     },
     "Adidas": {
-      "note": "Adizero 4.0 y 6.0 · Adulto. Tallas comerciales publicadas por Adidas/Saranac. Las medidas de mano en centímetros están pendientes de confirmar para esta línea.",
-      "source": "https://catalogs.asbsports.com/vendors/pdfs/Adidas-Team_Saranac-FW26.pdf",
+      "note": "Adizero 4.0 y 6.0 · Adulto. Mide desde la base de la palma hasta la punta del dedo medio. Las medidas son orientativas y corresponden a la guía general de guantes Adidas. Confirma el ajuste para tu modelo.",
+      "source": "https://www.adidas.com.au/help/sea-size-guide/accessories",
       "sections": [
         {
           "title": "Adizero – Adulto",
           "columns": [
             "Talla",
-            "Nombre"
+            "Nombre",
+            "Largo de mano (cm)"
           ],
           "rows": [
             [
               "XS",
-              "Extra pequeña"
+              "Extra pequeña",
+              "Sin medida publicada"
             ],
             [
               "S",
-              "Pequeña"
+              "Pequeña",
+              "16,5–19,0"
             ],
             [
               "M",
-              "Mediana"
+              "Mediana",
+              "19,0–22,0"
             ],
             [
               "L",
-              "Grande"
+              "Grande",
+              "21,6–24,1"
             ],
             [
               "XL",
-              "Extra grande"
+              "Extra grande",
+              "24,1–26,7"
             ],
             [
               "2XL / XXL",
-              "Doble extra grande"
+              "Doble extra grande",
+              "26,7–29,2"
             ]
           ]
         }
