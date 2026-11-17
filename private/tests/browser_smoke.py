@@ -42,7 +42,7 @@ def main():
   state={'mode':'ok','price':29.99,'available':True,'calls':0,'limit':99,'stock':99}
   def route_rpc(route):
    state['calls']+=1;name=route.request.url.rsplit('/',1)[-1];args=route.request.post_data_json or {};data=None
-   if state['mode']=='error':route.fulfill(status=503,json={'message':'offline'},headers={'Access-Control-Allow-Origin':'*'});return
+   if state['mode']=='error':route.abort('namenotresolved');return
    if name=='get_public_catalog':data={'categories':[],'products':[]} if state['mode']=='empty' else CATALOG
    elif name=='get_public_product':
     found=next((p for p in PRODUCTS if p['slug']==args['p_slug']),None);data={**found,'maxQuantity':state['limit'],'variants':[{**variant,'maxAvailableQuantity':state['stock']} for variant in found['variants']]} if found else None
@@ -96,7 +96,7 @@ def main():
      page.wait_for_selector('#relatedGrid .product-card')
      card_width=page.locator('#relatedGrid .product-card').first.bounding_box()['width']
      grid_width=page.locator('#relatedGrid').bounding_box()['width']
-     check(f'{width} recomendados compactos',card_width<=grid_width/(5 if width>=1180 else 3 if width>=760 else 2))
+     check(f'{width} recomendados compactos',card_width<=min(224,grid_width/(4 if width>=1180 else 3 if width>=760 else 2)))
      check(f'{width} sin desborde de página',page.evaluate('document.documentElement.scrollWidth<=innerWidth+1'))
      check(f'{width} flechas según dispositivo',page.locator('#relatedNext').is_visible()==(not touch))
      if touch:page.locator('#relatedGrid').evaluate('(grid)=>{grid.scrollLeft=grid.scrollWidth}')
@@ -155,6 +155,34 @@ def main():
     for index,(name,hexcode,sizes) in enumerate([('Azul','#2563eb',[('M',True),('L',False)]),('Rojo','#dc2626',[('S',True),('M',True)]),('Negro','#111111',[('M',False)])]):
      colors.append(dict(id=uuid(70+index),name=name,label=name,hex=hexcode,images=[dict(storagePath=f'/assets/images/logo.webp?color={name}&foto={photo}',alt=f'{name} {photo}',width=3000,height=3000) for photo in [1,2]],variants=[dict(id=uuid(80+index*3+j),available=available,maxAvailableQuantity=(2 if available else 0),sizeLabel=size,normalizedSize=size) for j,(size,available) in enumerate(sizes)]))
     PRODUCTS[0]['colors']=colors;PRODUCTS[0]['variants']=[];PRODUCTS[0]['brand']='Adidas'
+    long_name='Franklin Youth CFX Pro edición especial con protección adicional para bateo'
+    hover_catalog={**CATALOG,'products':[{**CATALOG['products'][0],'name':long_name,'price':1234567.89,'colors':colors,'variants':[]},*CATALOG['products'][1:]]}
+    context=browser.new_context(viewport={'width':1024,'height':900});page=context.new_page()
+    context.route('**/rpc/get_public_catalog',lambda route:route.fulfill(json=hover_catalog,headers={'Access-Control-Allow-Origin':'*'}))
+    page.goto(origin+'/catalogo.html');card=page.locator('.product-card').filter(has=page.locator('.product-card-link[href*="guante-franklin"]'))
+    card.wait_for();photo=card.locator('.card-image img');cover_src=photo.get_attribute('src')
+    check('Catálogo de escritorio usa tres tarjetas con foto enmarcada',page.locator('#catalogGrid').evaluate("grid=>getComputedStyle(grid).gridTemplateColumns.split(' ').length===3") and photo.evaluate("img=>parseFloat(getComputedStyle(img.parentElement).borderRadius)>0"))
+    page.screenshot(path=str(OUT/'catalogo-tarjetas-1024.png'),full_page=True)
+    card.hover();page.wait_for_function("document.querySelector('.card-image img[src*=\"color=Rojo\"]')",timeout=5000)
+    page.wait_for_function("document.querySelector('.card-image img[src*=\"color=Negro\"]')",timeout=5000)
+    check('Vista previa pasa por los colores con una foto por variante','foto=1' in photo.get_attribute('src') and 'color=Azul' in cover_src)
+    page.mouse.move(1,1)
+    check('Al salir de la tarjeta se recupera la foto original',photo.get_attribute('src')==cover_src)
+    page.emulate_media(reduced_motion='reduce');card.hover();page.wait_for_timeout(900)
+    check('Vista previa respeta movimiento reducido',photo.get_attribute('src')==cover_src)
+    page.set_viewport_size({'width':320,'height':900});title=card.locator('.card-title');price=card.locator('.price')
+    check('Nombre largo completo en móvil',title.inner_text()==long_name and title.evaluate('e=>e.scrollHeight<=e.clientHeight+1'))
+    check('Precio completo dentro de la tarjeta móvil',price.inner_text()=='$1,234,567.89' and price.evaluate('e=>e.scrollWidth<=e.clientWidth+1'))
+    page.set_viewport_size({'width':1264,'height':544});page.goto(origin+'/');page.wait_for_selector('.home-category-section .price')
+    check('Barra fija deja ver el encabezado y el precio al llegar a la sección',page.evaluate("""()=>{
+      const section=document.querySelector('.home-category-section');
+      section.scrollIntoView({block:'start'});
+      const header=document.querySelector('.site-header').getBoundingClientRect();
+      const heading=section.querySelector('.section-head').getBoundingClientRect();
+      const price=section.querySelector('.price').getBoundingClientRect();
+      return heading.top>=header.bottom && price.bottom<=innerHeight;
+    }"""))
+    context.close()
     context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/producto/guante-franklin/');page.wait_for_selector('#colorOptions button')
     check('Galería inicial azul y dos fotos','color=Azul' in page.locator('#mainProductImage').get_attribute('src') and page.locator('#thumbs button').count()==2)
     page.wait_for_selector('#productSizeGuide .size-table')
@@ -199,6 +227,7 @@ def main():
     for row in CATALOG['products']:row.pop('showOnCover',None)
     # Estados y tiempos del loader sin tocar dependencias ni fuentes.
     context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/');page.wait_for_selector('.product-card')
+    page.wait_for_selector('#globalLoader',state='hidden')
     timing=page.evaluate("""async()=>{
       const root=document.querySelector('#globalLoader'),start=performance.now();let shown=null,leaving=null,earlyHidden=false,logo=false;
       const observer=new MutationObserver(()=>{if(!root.hidden&&shown===null){shown=performance.now();logo=!!root.querySelector('.loader-logo')?.checkVisibility()}if(root.classList.contains('leaving')&&leaving===null)leaving=performance.now()});
@@ -215,12 +244,29 @@ def main():
     check('Loader termina',timing['hidden'])
     page.evaluate('window.stalled=BattingUI.withLoader(new Promise(()=>{})).catch(()=>{})');page.wait_for_timeout(12100);check('Loader timeout con WhatsApp',page.locator('#loaderError').is_visible() and page.locator('#loaderError a').get_attribute('href').startswith('https://wa.me/'))
     context.close()
+    context=browser.new_context();page=context.new_page()
+    pending_catalog=[]
+    page.route('**/rpc/get_public_catalog',lambda route:pending_catalog.append(route))
+    page.goto(origin+'/',wait_until='domcontentloaded')
+    page.wait_for_selector('#globalLoader')
+    page.wait_for_function('performance.getEntriesByType("resource").some(entry=>entry.name.endsWith("/assets/icons/softball.svg"))')
+    check('Inicio mantiene el cargador mientras espera el catálogo',page.locator('#loaderState').is_visible() and page.locator('#homeCategorySections .product-card').count()==0)
+    pending_catalog[0].fulfill(json=CATALOG,headers={'Access-Control-Allow-Origin':'*'})
+    page.wait_for_selector('#globalLoader',state='hidden')
+    check('Inicio revela la tienda con productos y búsqueda disponibles',page.locator('#homeCategorySections .product-card').count()>0 and page.locator('#homeSearch').is_enabled())
+    context.close()
     for mode in ['empty','error']:
-     state['mode']=mode;context=browser.new_context();context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/');page.wait_for_timeout(700)
+     state['mode']=mode;context=browser.new_context();context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/')
+     page.wait_for_selector('#homeCategorySections .coming-soon-home' if mode=='empty' else '#homeCatalogStatus .coming-soon-home')
      text=page.locator('#main').inner_text();check(f'Estado {mode}',('PRÓXIMAMENTE' in text) if mode=='empty' else ('PRÓXIMAMENTE' not in text and 'Reintentar' in text))
      if mode=='empty':
       for width in WIDTHS:
        page.set_viewport_size({'width':width,'height':900});inspect(page,f'{width} inicio vacio');shot(page,width,'home-empty')
+     else:
+      check('Inicio sin DNS conserva portada, guía y contacto',all(page.locator(selector).is_visible() for selector in ['#heroVisual .hero-brand','#main .size-guide-card','#contacto']))
+      check('Fallo de catálogo muestra ayuda sin bloquear el inicio',page.locator('#globalLoader').is_hidden() and page.locator('#homeSearch').is_disabled() and page.locator('#homeCatalogStatus a').get_attribute('href').startswith('https://wa.me/'))
+      state['mode']='ok';page.get_by_role('button',name='Reintentar').click();page.wait_for_selector('#homeCategorySections .product-card')
+      check('Reintentar recupera catálogo y búsqueda',page.locator('#homeSearch').is_enabled() and not page.locator('#homeCatalogStatus').inner_text().strip())
      context.close()
     state['mode']='ok';context=browser.new_context();context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/');page.wait_for_selector('.product-card')
     invalid=page.evaluate('async()=>{try{await BattingData.revalidateCart(Array.from({length:51},(_,i)=>String(i)));return false}catch(e){return e.message.includes("50")}}');check('Rechaza >50 ids antes de red',invalid)

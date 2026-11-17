@@ -43,6 +43,8 @@ El comando solo prepara configuración; no publica. wrangler.jsonc está ignorad
 
 ## Supabase antes de publicar
 
+Comprueba en el dashboard que el proyecto esté activo y ejecuta `pnpm run check:live` con la URL y clave publicable del entorno que vas a desplegar. El build estático puede terminar aunque la API esté caída, por lo que un build exitoso no confirma la disponibilidad del catálogo. Supabase puede pausar proyectos gratuitos con poca actividad. Si el proyecto está pausado, usa **Resume project** en el dashboard y repite la consulta antes de publicar. [Pausas de proyectos en Supabase](https://supabase.com/docs/guides/platform/free-project-pausing).
+
 En Authentication, desactivar Allow new users to sign up. La consulta real /auth/v1/settings todavía devuelve disable_signup=false. El propietario ya existe y está confirmado; desactivar nuevos registros no elimina su cuenta. El conector no permite cambiar Auth y la automatización de Chrome se detuvo porque no pudo determinar la URL con confianza: este ajuste no está hecho.
 
 Configurar Site URL/Redirect URLs al origen final del panel si se activa recuperación de contraseña. El flujo actual solo usa correo/contraseña; no depende de redirects OAuth. Revisar los límites de intentos de Auth antes de abrir el panel a Internet. No se configuró CAPTCHA ni se cambió la contraseña del propietario.

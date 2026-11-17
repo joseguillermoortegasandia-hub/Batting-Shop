@@ -70,26 +70,28 @@
     return button;
   }
 
-  function productCard(product,{showTag=true}={}){
+  function productCard(product){
     const color=window.BattingData.firstAvailableColor(product);
     const available=window.BattingData.isAvailable(product);
     const image=window.BattingData.firstProductImage(product);
     const href=window.BattingData.productUrl(product.slug,color?.name);
     const card=el('article',{class:'product-card'});
-    if(showTag&&product.featured)card.append(el('span',{class:'tag',text:'DESTACADO'}));
+    if(product.featured)card.append(el('span',{class:'tag',text:'DESTACADO'}));
     card.append(favoriteButton(product,{className:'favorite-button card-favorite'}));
     const link=el('a',{class:'product-card-link',href,'aria-label':`Ver ${product.name}`});
     link.addEventListener('keydown',event=>{
       if(event.key===' '){event.preventDefault();link.click()}
     });
-    link.append(el('div',{class:'card-image'},el('img',{
+    const photo=el('img',{
       src:image.thumbnailUrl||image.url,
       width:image.width||1000,height:image.height||1000,
       alt:image.alt||product.name,
       loading:document.querySelector('.product-card')?'lazy':'eager',
       fetchpriority:document.querySelector('.product-card')?'auto':'high',
       decoding:'async'
-    })));
+    });
+    link.append(el('div',{class:'card-image'},photo));
+    if(product.colors?.length>1)previewCardColors(card,photo,product,image);
     const body=el('div',{class:'card-body'});
     body.append(
       el('span',{class:`status${available?'':' out'}`,text:available?'Disponible':'Agotado'}),
@@ -105,6 +107,57 @@
     body.append(el('div',{class:'price',text:window.BattingData.listingPrice(product).text}));
     link.append(body);card.append(link);
     return card;
+  }
+
+  function previewCardColors(card,photo,product,cover){
+    const originalSrc=cover.thumbnailUrl||cover.url;
+    const originalAlt=photo.alt;
+    const seen=new Set();
+    const photos=[];
+    for(const color of product.colors){
+      const image=color.images?.[0];
+      const src=image?.thumbnailUrl||image?.url;
+      if(!src||seen.has(src))continue;
+      seen.add(src);
+      photos.push({src,alt:image.alt||`${product.name} · ${window.BattingData.colorDisplay(color)}`});
+    }
+    if(photos.length<2)return;
+    const coverIndex=photos.findIndex(image=>image.src===originalSrc);
+
+    const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+    let timer;
+    let run=0;
+    function stop(){
+      run++;
+      clearTimeout(timer);
+      if(photo.getAttribute('src')!==originalSrc)photo.src=originalSrc;
+      photo.alt=originalAlt;
+    }
+    card.addEventListener('pointerenter',event=>{
+      if(event.pointerType==='touch'||reducedMotion.matches)return;
+      const currentRun=++run;
+      let nextIndex=(coverIndex+1)%photos.length;
+      async function advance(){
+        if(currentRun!==run||!card.isConnected)return;
+        if(document.hidden||reducedMotion.matches){stop();return;}
+        const next=photos[nextIndex];
+        nextIndex=(nextIndex+1)%photos.length;
+        const preview=new Image();
+        preview.src=next.src;
+        try{
+          await preview.decode();
+          if(currentRun!==run||!card.isConnected)return;
+          photo.src=next.src;
+          photo.alt=next.alt;
+        }catch{
+          // A missing preview leaves the current photo visible.
+        }
+        if(currentRun===run&&card.isConnected)timer=setTimeout(advance,1200);
+      }
+      timer=setTimeout(advance,650);
+    });
+    card.addEventListener('pointerleave',stop);
+    card.addEventListener('pointercancel',stop);
   }
 
   const drawerOpeners=new Map();
@@ -205,20 +258,24 @@
     }
   }
 
-  async function withLoader(promise,{retry=null}={}){
+  async function withLoader(promise,{retry=null,delay=350,showError=true}={}){
     const token=++loaderToken;
-    let settled=false;
-    const threshold=setTimeout(()=>{if(!settled&&token===loaderToken)showLoader()},350);
+    if(delay===0)showLoader();
+    const threshold=delay>0?setTimeout(()=>{if(token===loaderToken)showLoader()},delay):null;
     let timeoutId;
     const timeoutPromise=new Promise((_,reject)=>{
       timeoutId=setTimeout(()=>reject(new Error('La carga tardó demasiado.')),12000);
     });
     try{
       const result=await Promise.race([Promise.resolve(promise),timeoutPromise]);
-      settled=true;clearTimeout(threshold);clearTimeout(timeoutId);await hideLoader(token);return result;
+      clearTimeout(threshold);clearTimeout(timeoutId);await hideLoader(token);return result;
     }catch(error){
-      settled=true;clearTimeout(threshold);clearTimeout(timeoutId);
-      if(token===loaderToken)showLoaderError(retry||(()=>location.reload()));
+      clearTimeout(threshold);clearTimeout(timeoutId);
+      if(showError){
+        if(token===loaderToken)showLoaderError(retry||(()=>location.reload()));
+      }else{
+        await hideLoader(token);
+      }
       throw error;
     }
   }

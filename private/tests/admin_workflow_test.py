@@ -107,7 +107,8 @@ def main():
       page.locator('#savePublish').click();page.wait_for_selector('#publishFeedback',state='visible');assert page.locator('#publishFeedback').evaluate("e=>e.closest('dialog').open && e.contains(document.elementFromPoint(e.getBoundingClientRect().x+10,e.getBoundingClientRect().y+10))");assert not db['products'];assert not errors,errors
       print('PASS formulario incompleto muestra error y no escribe productos',flush=True)
       page.locator('#fName').fill('Producto de prueba local');page.locator('#fBrand').fill('Marca de prueba');page.locator('#fPrice').fill('12.50');page.locator('#fDescription').fill('Solo fixture local, nunca se envía a la base real.')
-      assert page.locator('.editor-tabs, #fStatus, #saveDraft').count()==0
+      assert page.locator('.editor-tabs, #fStatus').count()==0
+      assert page.locator('#saveDraft').is_visible()
       assert page.locator('#imageFiles').is_visible()
       page.locator('#fMaxQuantity').select_option('1')
       page.locator('#fShowOnCover').check()
@@ -156,6 +157,14 @@ def main():
       assert len(db['products'])==1 and len(db['product_variants'])==1
       page.screenshot(path=str(ROOT/'artifacts/panel-error-publicacion-320.png'),full_page=True)
       page.set_viewport_size({'width':1366,'height':900})
+      page.locator('#saveDraft').click()
+      page.wait_for_selector('#productEditor',state='hidden',timeout=10000)
+      assert len(db['products'])==1 and db['products'][0]['status']=='draft'
+      assert len(db['product_images'])==1 and page.locator('#metricPublished').inner_text()=='0'
+      print('PASS guarda fotos en borrador sin publicar',flush=True)
+      page.get_by_role('button',name='Productos',exact=True).click()
+      page.get_by_role('button',name='Editar',exact=True).click()
+      page.wait_for_selector('#productEditor[open]')
       page.locator('#savePublish').click()
       try:page.wait_for_selector('#productEditor',state='hidden',timeout=10000)
       except Exception:print('SAVE DIAGNOSTICO',page.locator('#adminToastRegion').inner_text(),requests,errors,db,flush=True);raise
@@ -168,6 +177,7 @@ def main():
       assert page.locator('#metricValue').inner_text()=='$10.00'
       assert db['product_colors'][0]['name']=='Blanco'
       page.get_by_role('button',name='Productos',exact=True).click();page.get_by_role('button',name='Editar',exact=True).click();page.wait_for_selector('#productEditor[open]')
+      assert page.locator('#saveDraft').is_hidden()
       assert page.locator('#fShowOnCover').is_checked() and db['products'][0]['show_on_cover'] is True
       assert page.locator('#fMaxQuantity').input_value()=='1';page.locator('#closeEditor').click()
       # Compatibilidad: las presentaciones antiguas no se borran al simplificar el editor.

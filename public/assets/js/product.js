@@ -80,7 +80,7 @@
   try{
     const related=await window.BattingData.loadRelated(p.id,10);
     relatedGrid.replaceChildren();
-    for(const item of related)relatedGrid.append(productCard(item,{showTag:false}));
+    for(const item of related)relatedGrid.append(productCard(item));
     if(related.length)wireRelatedControls();
     else relatedGrid.append(el('div',{class:'empty-state',text:'No hay productos relacionados disponibles ahora mismo.'}));
   }catch(error){
