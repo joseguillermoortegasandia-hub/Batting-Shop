@@ -8,13 +8,13 @@ Estado al 2026-11-04: configuración del repositorio preparada; no se crearon pr
 |---|---|---|
 | Framework | None | None |
 | Directorio raíz | / | / |
-| Rama de producción inicial | fix/store-security-performance | fix/store-security-performance |
+| Rama de producción inicial | main | main |
 | Comando de build | pnpm run build | pnpm run build:panel |
 | Salida | dist | dist-panel |
 | Node | 24 | 24 |
 | pnpm | 11.5.1 | 11.5.1 |
 
-Cuando se fusione esta rama a main, cambiar la rama de producción de ambos proyectos y PRODUCTION_BRANCH juntos. main todavía conserva la versión original: no publicarla por accidente.
+La rama `main` ya contiene las mejoras de la tienda y el panel. Usar `PRODUCTION_BRANCH=main` para producción.
 
 Variables de build, producción y preview:
 
@@ -60,3 +60,9 @@ Configurar Site URL/Redirect URLs al origen final del panel si se activa recuper
 Pruebas preparadas: pnpm run verify, pnpm run test:browser, pnpm run test:panel, pnpm run test:pages y pnpm run check:live. La última consulta Supabase real sin modificar productos y registra pendientes de Auth en artifacts/predeploy-live.json.
 
 Referencias: https://developers.cloudflare.com/pages/configuration/build-configuration/ , https://developers.cloudflare.com/pages/functions/wrangler-configuration/ , https://developers.cloudflare.com/pages/configuration/preview-deployments/ .
+
+## Tienda en GitHub Pages y panel en Cloudflare
+
+Para la tienda, seleccionar GitHub Actions como origen de Pages; publicar únicamente el artefacto `dist/`. No seleccionar `main /`, que publica el README. El workflow `.github/workflows/github-pages.yml` compila la tienda con sus variables públicas de Supabase.
+
+Para el panel, crear otro proyecto Cloudflare Pages conectado a este repositorio, rama `main`, framework None, build `pnpm run build:panel`, salida `dist-panel`, Node 24 y pnpm 11.5.1. `STOREFRONT_URL` puede incluir la ruta del repositorio: `https://joseguillermoortegasandia-hub.github.io/Batting-Shop/`. Configurar `PANEL_URL` con la dirección real del panel, las dos variables públicas de Supabase y los tres valores de Access descritos arriba. Configurar Access para producción y previews antes de usar el panel.
