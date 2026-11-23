@@ -25,5 +25,6 @@ jobs:
       - run: pnpm run verify
       - run: pnpm run test:panel
       - run: pnpm run test:browser
+      - run: pnpm run test:github
       - run: pnpm run test:pages
       - run: pnpm audit

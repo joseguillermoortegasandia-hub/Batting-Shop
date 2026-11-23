@@ -1,0 +1,56 @@
+name: Publicar tienda en GitHub Pages
+
+# Publicación de pruebas y publicación manual.
+on:
+  push:
+    branches: [main, fix/store-security-performance]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || vars.DEPLOY_GITHUB_PAGES == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .node-version
+      - run: corepack enable && corepack prepare pnpm@11.5.1 --activate
+      - run: pnpm install --frozen-lockfile
+      - name: Configurar Pages
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: Construir únicamente la tienda pública
+        run: node private/scripts/build-github.mjs
+        env:
+          SITE_URL: ${{ steps.pages.outputs.base_url }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY || secrets.SUPABASE_ANON_KEY }}
+          NOINDEX: '1'
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -155,7 +155,7 @@ El Worker solo incluye /producto/* mediante _routes.json. _headers protege los a
 Aplica 004 después de 001–003 y prueba prelaunch-audit.sql en una sesión independiente como postgres. Rollback: private/supabase/rollback/004_security_performance.rollback.sql. El rollback vuelve a permitir listar y conserva los derivados y las columnas para no perder datos.
 004 quita product_images_public_read y permite SELECT de storage.objects solo a is_admin(). Conserva el bucket público para que funcionen las URLs conocidas. Un bucket público no oculta una foto de borrador cuya URL ya se conoce: para confidencialidad de borradores hace falta un bucket privado separado. Revisa políticas adicionales: una política permisiva ajena puede volver a permitir listados.
 
-Las nuevas subidas verifican mínimo 800×800 y máximo de entrada 5 MB, convierten a WebP de hasta 1600×1600 (calidad 82), miniatura 480×480 y JPG OG <=300 KiB. Los nombres son UUID y cada variante tiene su ruta en product_images. Se usa un lienzo cuadrado blanco para conservar encuadre sin recortar. Los JPG se recomprimen/reducen hasta cumplir el tamaño. El Worker usa ogStoragePath y, para imágenes legacy que aún no tienen JPG confirmado, usa la portada JPG de la tienda.
+Las nuevas subidas verifican mínimo 800×800 y máximo de entrada 5 MB, convierten a WebP de 1600×1600 (calidad 82), miniatura 480×480 y JPG OG <=300 KiB. Los nombres son UUID y cada variante tiene su ruta en product_images. Se usa un lienzo cuadrado blanco para conservar encuadre sin recortar. Los JPG se recomprimen/reducen hasta cumplir el tamaño. El Worker usa ogStoragePath y, para imágenes legacy que aún no tienen JPG confirmado, usa la portada JPG de la tienda.
 Las fotos que ya estén en Storage necesitan volver a subirse o migrarse con una cuenta admin; esta revisión no puede convertir datos de una instancia no conectada. Para las 25 referencias locales ya se generaron JPG en artifacts/reference-derivatives, sin cambiar originales. Se pueden regenerar con:
 `python private/scripts/prepare_local_images.py private/reference-images artifacts/reference-derivatives`.
 
@@ -207,6 +207,25 @@ Las facturas se consultan únicamente en el panel, con URLs firmadas temporales.
 
 La migración `20261105031159_stock_limits_home_cover.sql` añade la casilla **Mostrar en la portada de inicio** y el límite público de compra por variante. Aplica después de las migraciones anteriores. El límite de compra es el menor entre stock y máximo del producto. Los costos y datos de proveedor quedan en inventario privado.
 
-La portada muestra un producto marcado y disponible a la vez y cambia cada tres segundos. El enlace abre la ficha. Incluye pausa y respeta el ajuste de movimiento reducido. El logo se muestra hasta que haya un producto disponible marcado para portada.
+La portada muestra un producto marcado a la vez y cambia cada tres segundos, sin botón de pausa ni pausa por cursor/foco. Recorre todos los productos publicados marcados **Mostrar en la portada de inicio**, sin límite de tres y con una sola imagen en el DOM. El enlace abre la ficha. La animación flotante respeta el ajuste de movimiento reducido; la rotación continúa. El logo se muestra hasta que haya un producto marcado para portada. El navegador omite la rotación mientras la pestaña está oculta.
+
+### Prueba y despliegue en GitHub Pages
+
+La tienda también admite GitHub Pages. `pnpm run build:github` usa `SITE_URL` con la URL completa (incluida `/Batting-Shop` para un sitio de repositorio), `SUPABASE_URL` y `SUPABASE_ANON_KEY`. Genera únicamente la tienda en `dist/`, con rutas de recursos adaptadas, `.nojekyll` y fichas `/producto/?slug=...`; no necesita reconstrucción para consultar productos nuevos. `pnpm run test:github` verifica un catálogo de 120 productos en raíz y subruta, rotación completa, fichas directas y recargas en un servidor estático sin reescrituras.
+
+Cuando el catálogo esté listo:
+
+1. Subir estos cambios a GitHub y seleccionar **Settings → Pages → Source: GitHub Actions**.
+2. Crear la variable de Actions `SUPABASE_URL` y la variable pública (o secreto) `SUPABASE_ANON_KEY` con la clave pública anon/publishable del proyecto. No usar claves privadas.
+3. Ejecutar manualmente **Actions → Publicar tienda en GitHub Pages → Run workflow** sobre la rama que tenga estos cambios. Para publicar automáticamente al hacer push a `main` o `fix/store-security-performance`, definir la variable `DEPLOY_GITHUB_PAGES=true` después de habilitar Pages. El workflow usa `NOINDEX=1` para la prueba; cambiarlo a `0` para el lanzamiento definitivo.
+4. Comprobar inicio, búsqueda, fichas al recargar, tallas, favoritos y pedido por WhatsApp en la URL publicada.
+
+El panel se despliega aparte con su protección de servidor existente; no se incluye en GitHub Pages. GitHub Pages no ejecuta el Worker de Cloudflare ni aplica `_headers`: la salida estática añade CSP por meta, pero las vistas previas sociales de cada producto requieren el despliegue de Cloudflare con Worker. Véase la [documentación oficial de workflows de GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+
+Antes del lanzamiento, desactivar **Allow new users to sign up** en Supabase Auth y repetir `pnpm run check:live`. El acceso administrativo por contraseña existente continúa separado de la tienda pública.
 
 La ficha presenta descripción abierta y la tabla de la marca cuando existen tallas y hay una guía disponible. Reutiliza el catálogo de la sesión mientras esté fresco y usa miniaturas en la portada, tarjetas y galería de miniaturas.
+
+La compilación agrupa el JavaScript compartido y comprime JS/CSS. Las tarjetas usan miniaturas y carga diferida; la búsqueda espera 120 ms entre cambios y conserva el índice en memoria. Las categorías reservan el mismo espacio cuadrado para la foto y dos líneas para el título.
+
+La foto nítida de la manga Nike está en `public/assets/images/nike-pro-youth-sleeve.webp` (1600 px) y su miniatura de 480 px. Fuente: [Nike Pro Dri-FIT juvenil 4.0](https://www.nike.com/t/pro-dri-fit-big-kids-football-sleeve-4-NZn8j9). `imageOverrides` sustituye únicamente la ruta antigua borrosa; las nuevas fotos del panel conservan sus propias rutas.
