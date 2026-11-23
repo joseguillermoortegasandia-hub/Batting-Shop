@@ -58,7 +58,7 @@ async function productHtml(request, env, slug) {
   const images = [...(product.images || []), ...(product.colors || []).flatMap(c => c.images || [])];
   const image = images.find(i => i.ogStoragePath)?.ogStoragePath;
   // Imágenes legacy sin JPG confirmado usan la portada JPG; nunca se inventa una URL.
-  const ogImage = image ? `${env.SUPABASE_URL}/storage/v1/object/public/product-images/${image.split('/').map(encodeURIComponent).join('/')}` : new URL('/assets/images/og-cover.jpg', url.origin).href;
+  const ogImage = image ? `${env.SUPABASE_URL}/storage/v1/object/public/product-images/${image.split('/').map(encodeURIComponent).join('/')}` : new URL('/assets/images/og-cover-v2.jpg', url.origin).href;
   const values = {'og:title':title, 'og:description':description, 'og:url':canonical, 'og:image':ogImage};
   let rewriter = new HTMLRewriter().on('title', {element(e){e.setInnerContent(title)}})
     .on('meta[name="description"]', {element(e){e.setAttribute('content',description)}})
