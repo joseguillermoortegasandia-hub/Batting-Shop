@@ -99,6 +99,46 @@
     photo.src=(detail?image.detailUrl||image.url:image.thumbnailUrl||image.url)||'/assets/images/logo.webp';
     if(alt!==undefined)photo.alt=alt;
   }
+  // Share decoded responsive images across cards and keep background traffic bounded.
+  const imagePreloads=new Map(),imageQueue=[];
+  let activeImagePreloads=0;
+  function drainImageQueue(){
+    while(activeImagePreloads<2&&imageQueue.length){
+      const task=imageQueue.shift();activeImagePreloads++;
+      task.start().finally(()=>{activeImagePreloads--;drainImageQueue()});
+    }
+  }
+  function preloadProductImage(image,{detail=false,sizes,priority='low'}={}){
+    if(!image)return Promise.resolve();
+    const key=JSON.stringify([detail,image.url,image.detailUrl,image.thumbnailUrl,image.srcset,image.thumbnailSrcset,sizes]);
+    let task=imagePreloads.get(key);
+    if(task){
+      if(priority==='high'){
+        task.photo.fetchPriority='high';
+        const index=imageQueue.indexOf(task);
+        if(index>0){imageQueue.splice(index,1);imageQueue.unshift(task)}
+      }
+      return task.promise;
+    }
+    const photo=new Image();photo.decoding='async';photo.fetchPriority=priority;
+    task={photo};
+    task.promise=new Promise(resolve=>{task.start=async()=>{
+      try{setProductImage(photo,image,{detail,sizes});await photo.decode()}
+      catch{imagePreloads.delete(key)}
+      finally{resolve()}
+    }});
+    imagePreloads.set(key,task);imageQueue.push(task);
+    if(priority==='high'){imageQueue.pop();imageQueue.unshift(task)}
+    // Retain recent decoded images without keeping the entire catalog in memory.
+    if(imagePreloads.size>96)imagePreloads.delete(imagePreloads.keys().next().value);
+    drainImageQueue();return task.promise;
+  }
+  function warmColorOptions(button,image,options={}){
+    const warm=()=>preloadProductImage(image,{...options,priority:'high'});
+    button.addEventListener('pointerenter',warm,{passive:true});
+    button.addEventListener('focus',warm);
+    button.addEventListener('pointerdown',warm,{passive:true});
+  }
   function productCard(product,{priority=false}={}){
     const color=product.listingColor||window.BattingData.firstAvailableColor(product);
     const colors=product.cardColors||product.colors||[];
@@ -141,10 +181,12 @@
       colors.forEach(item=>{
         const name=window.BattingData.colorDisplay(item),inStock=(item.variants||[]).some(variant=>variant.available);
         const button=el('button',{class:'card-color',type:'button',disabled:!inStock,'aria-label':`Ver color ${name}${inStock?'':' (agotado)'}`,'aria-pressed':String(item.id===color?.id),title:name},colorSwatch(item.hex,name));
+        warmColorOptions(button,item.images?.[0]||image,{sizes:photo.sizes});
         button.addEventListener('click',event=>{
           event.preventDefault();event.stopPropagation();
           const selected=item.images?.[0]||image;
           preview?.select(selected);
+          photo.loading='eager';
           setProductImage(photo,selected,{alt:selected.alt||`${product.name} · ${name}`});
           colorName.textContent=name;card.dataset.colorId=item.id;
           featuredTag.hidden=!colorIsFeatured(product,item);
@@ -161,6 +203,15 @@
     body.append(price);
     body.addEventListener('click',event=>{if(!event.target.closest('button,a'))link.click()});
     card.append(link,body);
+    let warmed=false;
+    const warmColors=()=>{
+      if(warmed||navigator.connection?.saveData)return;
+      warmed=true;
+      colors.forEach(item=>preloadProductImage(item.images?.[0],{sizes:photo.sizes}));
+    };
+    card.addEventListener('pointerenter',warmColors,{passive:true});
+    card.addEventListener('focusin',warmColors);
+    card.addEventListener('pointerdown',warmColors,{passive:true});
     return card;
   }
 
@@ -440,7 +491,7 @@
   }
 
   window.BattingUI={
-    qs,qsa,el,loadError,colorSwatch,colorListings,homeListings,setProductImage,productCard,favoriteButton,syncFavoriteButton,
+    qs,qsa,el,loadError,colorSwatch,colorListings,homeListings,setProductImage,preloadProductImage,warmColorOptions,productCard,favoriteButton,syncFavoriteButton,
     openDrawer,closeDrawer,wireChrome,toast,withLoader,setWhatsappContext,
     refreshFloatingWhatsapp,renderCategorySheet
   };

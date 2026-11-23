@@ -1,6 +1,6 @@
 (async function(){
   'use strict';
-  const {qs,el,productCard,colorSwatch,colorListings,setProductImage,withLoader}=window.BattingUI;
+  const {qs,el,productCard,colorSwatch,colorListings,setProductImage,preloadProductImage,warmColorOptions,withLoader}=window.BattingUI;
   window.BattingUI.wireChrome();window.BattingCart.updateCount();
   const legacyParams=new URLSearchParams(location.search);
   function slugFromLocation(){const parts=location.pathname.split('/').filter(Boolean);if(parts[0]==='producto'&&parts[1]){try{return decodeURIComponent(parts[1])}catch{return parts[1]}}return legacyParams.get('slug')||''}
@@ -34,6 +34,7 @@
       const button=el('button',{class:`color-option ${grip?'grip-color':'card-color'}${c.id===color?.id?' active':''}${available?'':' out'}`,type:'button','aria-pressed':String(c.id===color?.id),'aria-label':`${label}${available?' disponible':' agotado'}`,title:label});
       if(grip)button.append(el('span',{class:'color-ring'},colorSwatch(c.hex,label)),el('span',{text:label}));
       else button.append(colorSwatch(c.hex,label));
+      warmColorOptions(button,c.images?.[0]||p.images?.[0],{detail:true});
       button.addEventListener('click',()=>{selectColor(c);const u=new URL(location.href);u.searchParams.set('color',c.name);history.replaceState({},'',u.pathname+u.search);renderAll();qs('.gallery-main').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})});
       root.append(button);
     });
@@ -91,6 +92,13 @@
   renderAll();
   qs('.product-layout').hidden=false;
   qs('.product-details').hidden=false;
+  // Start only after the selected photo is ready, so alternatives cannot delay it.
+  qs('#mainProductImage').decode().catch(()=>{}).then(()=>{
+    if(navigator.connection?.saveData)return;
+    (p.colors||[]).filter(item=>item.id!==color?.id).forEach(item=>{
+      preloadProductImage(item.images?.[0]||p.images?.[0],{detail:true});
+    });
+  });
   const relatedGrid=qs('#relatedGrid');
   try{
     const related=await window.BattingData.loadRelated(p.id,10);

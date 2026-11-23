@@ -56,6 +56,26 @@ def main():
      page.goto(origin+'/producto/?slug=guante-franklin');page.wait_for_selector('#colorOptions button')
      main=page.locator('#mainProductImage');main.evaluate('(image)=>image.decode()')
      assert main.evaluate('(image)=>image.currentSrc').endswith('-'+('960' if density==2 else '320' if width<1024 else '480')+'.webp')
+     # Alternative colors must finish downloading before the first selection.
+     selected_width='960' if density==2 else '320' if width<1024 else '480'
+     alternative=page.evaluate('''async width=>{
+      const product=await BattingData.loadProduct('guante-franklin');
+      const image=product.colors[1].images[0];
+      return new URL(image.srcset.split(',').map(s=>s.trim().split(' ')[0]).find(s=>s.endsWith('-'+width+'.webp')),location.origin).href;
+     }''',selected_width)
+     page.wait_for_function('url=>performance.getEntriesByName(url).length>0',arg=alternative)
+     before_switch=images.count(alternative)
+     page.locator('#colorOptions button').nth(1).click()
+     main.evaluate('(image)=>image.decode()')
+     assert main.evaluate('(image)=>image.currentSrc')==alternative
+     assert images.count(alternative)==before_switch,('Color selection downloaded the main image again',alternative)
+     page.locator('#colorOptions button').nth(0).click()
+     page.locator('#colorOptions button').nth(1).click()
+     main.evaluate('(image)=>image.decode()')
+     # Chromium may reuse a larger cached thumbnail when it revisits the color.
+     assert main.evaluate('(image)=>image.currentSrc').rsplit('-',1)[0]==alternative.rsplit('-',1)[0]
+     assert images.count(alternative)==before_switch
+     print(f'PASS {width}px/{density}x: colores precargados; cambios rápidos sin volver a descargar la foto principal')
      inside=page.locator('#colorOptions .color-option').first
      assert inside.evaluate('(button)=>parseFloat(getComputedStyle(button).borderRadius)')>=22
      label=page.locator('#productAttributes dt').bounding_box();value=page.locator('#productAttributes dd').bounding_box()
