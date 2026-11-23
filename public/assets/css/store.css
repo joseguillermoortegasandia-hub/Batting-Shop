@@ -1839,6 +1839,7 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="c
 
 .visual-category strong,.visual-category small{display:block}
 .visual-category{display:grid;grid-template-rows:auto 1fr;align-content:start;justify-content:stretch;gap:8px;padding-top:32px}
+.visual-category::after{top:4px;line-height:24px}
 .visual-category>img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:contain;object-position:center;background:#fff}
 .visual-category>span{display:grid;grid-template-rows:auto auto;align-content:start}
 .visual-category strong{line-height:1.25;min-height:2.5em}
