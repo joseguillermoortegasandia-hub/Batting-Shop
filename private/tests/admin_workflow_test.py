@@ -112,11 +112,13 @@ def main():
       assert page.locator('#imageFiles').is_visible()
       page.locator('#fMaxQuantity').select_option('1')
       page.locator('#fShowOnCover').check()
+      assert page.locator('#fFeatured').is_hidden()
+      page.locator('.color-featured').first.check()
       assert page.locator('.product-stock-fields').count()==1
       assert page.locator('#imageColor').is_disabled() and page.locator('#uploadImages').is_disabled()
       assert page.locator('#addVariant, .variant-help, .variant-heading, .variant-row').count()==0
       labels=page.locator('#variantRows label').all_text_contents()
-      assert labels==['Color','Muestra de color','Stock','Costo USD'],labels
+      assert labels==['Color','Muestra de color',' Destacar este color','Stock','Costo USD'],labels
       page.locator('#variantRows .field').filter(has=page.locator('label',has_text='Color')).first.locator('input').fill('Blanco')
       assert page.locator('#imageColor').input_value()=='Blanco' and not page.locator('#imageColor').is_disabled()
       page.locator('#fCategory').select_option('20000000-0000-4000-8000-000000000002')
@@ -175,21 +177,24 @@ def main():
       assert sum(method=='POST' and path.startswith('/storage/') for method,path in requests)==3
       assert page.locator('#metricPublished').inner_text()=='1'
       assert page.locator('#metricValue').inner_text()=='$10.00'
-      assert db['product_colors'][0]['name']=='Blanco'
+      assert db['product_colors'][0]['name']=='Blanco' and db['product_colors'][0]['featured'] is True
       page.get_by_role('button',name='Productos',exact=True).click();page.get_by_role('button',name='Editar',exact=True).click();page.wait_for_selector('#productEditor[open]')
       assert page.locator('#saveDraft').is_hidden()
       assert page.locator('#fShowOnCover').is_checked() and db['products'][0]['show_on_cover'] is True
       assert page.locator('#fMaxQuantity').input_value()=='1';page.locator('#closeEditor').click()
       # Compatibilidad: las presentaciones antiguas no se borran al simplificar el editor.
-      color2={**db['product_colors'][0],'id':str(uuid.uuid4()),'name':'Negro','display_name':'Negro'}
+      color2={**db['product_colors'][0],'id':str(uuid.uuid4()),'name':'Negro','display_name':'Negro','featured':False}
       variant2={**db['product_variants'][0],'id':str(uuid.uuid4()),'color_id':color2['id'],'sale_price':15}
       db['product_colors'].append(color2);db['product_variants'].append(variant2)
       db['inventory_private'].append({'variant_id':variant2['id'],'stock':0,'cost':None,'provider_sku':'legacy-sku','provider_source_url':'https://supplier.example/item'})
       page.get_by_role('button',name='Editar',exact=True).click();page.wait_for_selector('#productEditor[open]')
       assert page.locator('.color-editor').count()==2
+      assert page.locator('.color-featured').first.is_checked() and not page.locator('.color-featured').last.is_checked()
+      page.locator('.color-featured').first.uncheck();page.locator('.color-featured').last.check()
       assert page.locator('.color-editor').last.locator('input[type=text]').first.input_value()=='Negro'
       page.locator('#savePublish').click();page.wait_for_selector('#productEditor',state='hidden')
       assert len(db['product_variants'])==2 and len(db['inventory_private'])==2
+      assert db['product_colors'][0]['featured'] is False and db['product_colors'][1]['featured'] is True
       assert db['inventory_private'][1]['provider_sku']=='legacy-sku'
       assert not any(method=='DELETE' for method,path in requests)
       assert all(row['sale_price'] is None for row in db['product_variants'])

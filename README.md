@@ -247,3 +247,11 @@ Las fotos publicadas tienen copias locales WebP de 320, 480, 960, 1280 y 1600 px
 `pnpm run images:refresh` consulta únicamente el catálogo público usando `.env.local`, reutiliza las copias existentes y prepara las fotos nuevas con Python/Pillow. Después se versionan los archivos generados. Los productos nuevos siguen funcionando con sus imágenes de Supabase mientras no tengan copias locales. El build incorpora `public/data/image-variants.json` en la configuración; la tienda no descarga ese JSON aparte.
 
 `pnpm run test:colors` comprueba tarjetas, filtros y favoritos por color; `pnpm run test:media` verifica tamaños reales, descarga adaptativa, círculos, características alineadas y textos completos en móvil y escritorio.
+
+## Destacados por color y acceso local al admin
+
+El editor de cada color incluye «Destacar este color». La etiqueta y el orden pertenecen al color elegido, incluso al cambiarlo desde una tarjeta. Los productos sin colores conservan su opción general. La migración conserva un color disponible de cada modelo previamente destacado y retira el límite de seis modelos.
+
+El inicio incluye todos los colores destacados y al menos un color de cada modelo visible de la categoría. El límite de inicio permite rellenar con otros colores, sin excluir modelos. Ver todos mantiene todos los colores de la categoría.
+
+El admin se mantiene local. Abrir `Abrir admin.cmd` compila el panel, reutiliza o inicia su servidor de fondo y abre http://localhost:8081/. El servidor solo escucha en este computador; cerrar Codex o la ventana del lanzador no lo detiene. Después de reiniciar Windows se vuelve a abrir el lanzador. El acceso sigue usando el inicio de sesión y los permisos de Supabase.

@@ -75,9 +75,22 @@
     window.BattingFavorites?.resolve?.(products);
     return products.flatMap(product=>{
       if(product.listingColor||!product.colors?.length)return [product];
-      if(!listingCache.has(product))listingCache.set(product,product.colors.map(color=>({...product,listingColor:color,cardColors:product.colors,colors:[color],variants:[]})));
+      if(!listingCache.has(product))listingCache.set(product,product.colors.map(color=>({...product,modelFeatured:product.featured,featured:colorIsFeatured(product,color),listingColor:color,cardColors:product.colors,colors:[color],variants:[]})));
       return listingCache.get(product);
     });
+  }
+  function colorIsFeatured(product,color){
+    if(typeof color?.featured==='boolean')return color.featured;
+    return Boolean((product.modelFeatured??product.featured)&&color?.id===(product.cardColors?.find(item=>window.BattingData.isAvailable({...product,colors:[item],variants:[]}))||product.cardColors?.[0]||window.BattingData.firstAvailableColor(product))?.id);
+  }
+  function homeListings(products,limit=8){
+    const groups=products.map(product=>colorListings([product]).slice().sort((a,b)=>Number(Boolean(b.featured))-Number(Boolean(a.featured))));
+    const highlighted=groups.flatMap(group=>group.filter(item=>item.featured));
+    const primary=groups.filter(group=>!group.some(item=>item.featured)).map(group=>group[0]).filter(Boolean);
+    const required=[...highlighted,...primary];
+    const selected=new Set(required);
+    const extra=groups.flat().filter(item=>!selected.has(item));
+    return [...required,...extra].slice(0,Math.max(required.length,limit));
   }
   function setProductImage(photo,image,{detail=false,alt,sizes}={}){
     const srcset=detail?image.srcset:image.thumbnailSrcset;
@@ -93,7 +106,7 @@
     const image=window.BattingData.firstProductImage(product);
     const href=window.BattingData.productUrl(product.slug,color?.name);
     const card=el('article',{class:'product-card'});
-    if(product.featured)card.append(el('span',{class:'tag',text:'DESTACADO'}));
+    const featuredTag=el('span',{class:'tag',text:'DESTACADO'});featuredTag.hidden=!(color?colorIsFeatured(product,color):product.featured);card.append(featuredTag);
     card.dataset.productSlug=product.slug;card.dataset.colorId=color?.id||'';
     const favorite=favoriteButton(product,{className:'favorite-button card-favorite',color});
     card.append(favorite);
@@ -134,6 +147,7 @@
           preview?.select(selected);
           setProductImage(photo,selected,{alt:selected.alt||`${product.name} · ${name}`});
           colorName.textContent=name;card.dataset.colorId=item.id;
+          featuredTag.hidden=!colorIsFeatured(product,item);
           status.className=`status${inStock?'':' out'}`;status.textContent=inStock?'Disponible':'Agotado';
           favorite.dataset.favoriteColorId=item.id;favorite.dataset.favoriteLabel=product.name+' · '+name;syncFavoriteButton(favorite,product.slug);
           link.href=titleLink.href=window.BattingData.productUrl(product.slug,item.name);
@@ -426,7 +440,7 @@
   }
 
   window.BattingUI={
-    qs,qsa,el,loadError,colorSwatch,colorListings,setProductImage,productCard,favoriteButton,syncFavoriteButton,
+    qs,qsa,el,loadError,colorSwatch,colorListings,homeListings,setProductImage,productCard,favoriteButton,syncFavoriteButton,
     openDrawer,closeDrawer,wireChrome,toast,withLoader,setWhatsappContext,
     refreshFloatingWhatsapp,renderCategorySheet
   };

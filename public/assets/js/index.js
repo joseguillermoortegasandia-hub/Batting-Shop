@@ -1,6 +1,6 @@
 (async function(){
   'use strict';
-  const {qs,el,productCard,colorListings,setProductImage,withLoader}=window.BattingUI;
+  const {qs,el,productCard,colorListings,homeListings,setProductImage,withLoader}=window.BattingUI;
   window.BattingUI.wireChrome();window.BattingCart.updateCount();
   const search=qs('#homeSearch');
   const status=qs('#homeCatalogStatus');
@@ -45,7 +45,7 @@
     const sections=qs('#homeCategorySections');sections.replaceChildren();visibleCategories.filter(c=>c.showOnHome!==false).forEach((category,index)=>{const all=byCategory(category.slug),section=el('section',{class:`section home-category-section${index%2?' alt-section':''}`}),container=el('div',{class:'container'}),head=el('div',{class:'section-head'}),titleWrap=el('div');titleWrap.append(el('span',{class:'eyebrow',text:index===0?'PRODUCTOS DISPONIBLES':'DESCUBRE MÁS'}),el('h2',{text:category.name}),category.description?el('p',{class:'section-sub',text:category.description}):document.createTextNode(''));head.append(titleWrap,el('a',{class:'text-link',href:window.BattingData.categoryUrl(category.slug),text:'Ver todos →'}));container.append(head);
       const brands=[...new Set(all.map(p=>p.brand).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
       const grid=el('div',{class:'product-grid'});
-      const render=(brand='all')=>{grid.replaceChildren();const list=colorListings(all.filter(p=>brand==='all'||p.brand===brand)).slice(0,category.homeLimit||8);const fragment=document.createDocumentFragment();list.forEach((p,i)=>fragment.append(productCard(p,{priority:index===0&&i<2})));grid.append(fragment);if(!list.length)grid.append(el('div',{class:'empty-state',text:'No hay productos de esa marca disponibles ahora mismo.'}))};
+      const render=(brand='all')=>{grid.replaceChildren();const list=homeListings(all.filter(p=>brand==='all'||p.brand===brand),category.homeLimit||8);const fragment=document.createDocumentFragment();list.forEach((p,i)=>fragment.append(productCard(p,{priority:index===0&&i<2})));grid.append(fragment);if(!list.length)grid.append(el('div',{class:'empty-state',text:'No hay productos de esa marca disponibles ahora mismo.'}))};
       if(brands.length>1){const chips=el('div',{class:'chips','aria-label':`Filtrar ${category.name} por marca`}),allButton=el('button',{class:'chip active',type:'button',text:'Todos'});const activate=(button,brand)=>{[...chips.children].forEach(n=>n.classList.remove('active'));button.classList.add('active');render(brand)};allButton.addEventListener('click',()=>activate(allButton,'all'));chips.append(allButton);brands.forEach(brand=>{const b=el('button',{class:'chip',type:'button',text:brand});b.addEventListener('click',()=>activate(b,brand));chips.append(b)});container.append(chips)}
       render();container.append(grid);section.append(container);sections.append(section);
     });

@@ -1,8 +1,8 @@
 (function(){
   'use strict';
   const cfg=window.BATTING_CONFIG||{};
-  const CATALOG_KEY='batting-shop-public-catalog-v6';
-  const PRODUCT_PREFIX='batting-shop-public-product-v6:';
+  const CATALOG_KEY='batting-shop-public-catalog-v7';
+  const PRODUCT_PREFIX='batting-shop-public-product-v7:';
   const CACHE_FRESH_MS=60_000,CACHE_STALE_MS=120_000;
   let inFlight=null;
   const pageCache=new Map(),searchIndexes=new WeakMap();

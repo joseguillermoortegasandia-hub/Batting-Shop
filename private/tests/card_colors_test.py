@@ -13,7 +13,7 @@ def main():
  bundle['categories'][0]['variantMode']='color_size'
  bundle['categories'][0]['attributes']=[dict(key='edad_nivel',label='Edad / nivel',scope='product',type='select',options=[dict(value='adulto',label='Adulto')])]
  product=bundle['products'][0]
- product['colors']=[dict(id=uuid(300+i),name=name,label=name,hex=hexcode,sortOrder=i,
+ product['colors']=[dict(id=uuid(300+i),name=name,label=name,hex=hexcode,sortOrder=i,featured=i==1,
   images=[dict(storagePath=f'/assets/images/logo.webp?color={name}',alt=name,width=1600,height=1600)],
   variants=[dict(id=uuid(400+i),available=i!=7,normalizedSize='M',sizeLabel='M',maxAvailableQuantity=2 if i!=7 else 0)])
   for i,(name,hexcode) in enumerate([('Azul','#2563eb'),('Rojo','#dc2626'),('Verde','#15803d'),('Blanco','#ffffff'),('Morado','#7e22ce'),('Amarillo','#facc15'),('Naranja','#ea580c'),('Negro','#111111')])]
@@ -45,6 +45,7 @@ def main():
       page.goto(origin+path)
       if path=='/':
        page.wait_for_selector('.product-card')
+       assert page.evaluate('''async()=>{const bundle=await BattingData.loadCatalogBundle();const model=bundle.products.find(p=>p.colors.length);const models=Array.from({length:10},(_,i)=>({...model,id:'model-'+i,slug:'model-'+i}));const cards=BattingUI.homeListings(models,2);return new Set(cards.map(p=>p.slug)).size===10&&cards.length===10&&cards.every(p=>p.featured===true)}''')
        page.evaluate("BattingFavorites.save([{slug:'guante-franklin',colorId:'00000000-0000-4000-8000-000000000300'},{slug:'guante-franklin',colorId:'00000000-0000-4000-8000-000000000301'}])")
       cards=page.locator(root+' .product-card').filter(has=page.locator('.product-card-link[href*="guante-franklin"]'))
       cards.first.wait_for()
@@ -59,11 +60,13 @@ def main():
       assert page.url==url
       assert 'color=Rojo' in card.locator('.card-image img').get_attribute('src')
       assert red.get_attribute('aria-pressed')=='true'
+      assert card.locator('.tag').is_visible()
       assert 'color=Rojo' in card.locator('.product-card-link').get_attribute('href')
       assert card.get_by_role('button',name='Ver color Negro (agotado)',exact=True).is_disabled()
       orange=card.get_by_role('button',name='Ver color Naranja',exact=True);orange.click()
       assert 'color=Naranja' in card.locator('.card-image img').get_attribute('src')
       assert orange.get_attribute('aria-pressed')=='true' and red.get_attribute('aria-pressed')=='false'
+      assert card.locator('.tag').is_hidden()
       assert card.locator('.card-favorite').get_attribute('aria-pressed')=='false'
       assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
      page.goto(origin+'/producto/?slug=guante-franklin')
@@ -90,7 +93,10 @@ def main():
      page.goto(origin+'/favoritos.html');page.wait_for_selector('.product-card')
      assert set(page.locator('#favoritesGrid .card-color-name').all_text_contents())=={'Rojo','Naranja'}
      page.reload();page.wait_for_selector('.product-card');assert page.locator('#favoritesGrid .product-card').count()==2
-     page.goto(origin+'/catalogo.html?categoria=batgrips&color=Rojo');page.wait_for_selector('.product-card')
+     page.goto(origin+'/catalogo.html?categoria=batgrips&color=Rojo')
+     try:page.wait_for_selector('.product-card',timeout=10000)
+     except Exception:
+      print('FILTER DEBUG',page.locator('main').inner_text(),page.evaluate('async()=>await BattingData.loadCatalogBundle()'),flush=True);raise
      assert page.locator('#catalogGrid .product-card').count()==1
      assert page.locator('#catalogGrid .card-color-name').inner_text()=='Rojo'
      page.goto(origin+'/catalogo.html?categoria=batgrips&talla=M');page.wait_for_selector('.product-card')
