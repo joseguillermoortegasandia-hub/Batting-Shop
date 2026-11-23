@@ -50,6 +50,12 @@ def main():
      assert page.locator('#heroVisual img').count()==1
      for width in [320,375,390,768,820,1024,1366,1920,2560]:
       page.set_viewport_size({'width':width,'height':900})
+      assert page.locator('.desktop-hero').is_visible()==(width>=1024),width
+      assert not page.locator('.mobile-intro').is_visible(),width
+      assert page.locator('.site-header').is_visible(),width
+      if width<1024:
+       header=page.locator('.site-header').bounding_box();search=page.locator('.search-wrap').bounding_box()
+       assert search['y']>=header['y']+header['height']-1 and search['y']<header['y']+header['height']+40,(width,header,search)
       cards=page.locator('.visual-category').evaluate_all("""nodes=>nodes.map(n=>{const r=n.getBoundingClientRect(),i=n.querySelector('img').getBoundingClientRect(),s=n.querySelector('small').getBoundingClientRect();return {top:r.top,imgTop:i.top,imgWidth:i.width,imgHeight:i.height,countTop:s.top}})""")
       for a in cards:
        assert abs(a['imgWidth']-a['imgHeight'])<1,(width,a)

@@ -224,11 +224,11 @@ def main():
     state['stock']=99;context.close()
     # Rotación, enlaces y reutilización del catálogo de la sesión.
     CATALOG['products'][0]['showOnCover']=True;CATALOG['products'][1]['showOnCover']=True
-    context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page()
+    context=browser.new_context(viewport={'width':1366,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page()
     page.goto(origin+'/');page.wait_for_selector('#heroVisual .cover-float');cover=page.locator('#heroVisual .cover-float')
     first=cover.get_attribute('href');page.wait_for_function("(first)=>document.querySelector('.cover-float').getAttribute('href')!==first",arg=first,timeout=5000)
     check('Portada rota a otro producto cada 3 segundos',cover.get_attribute('href')=='/producto/pelota-softball/')
-    check('Portada flotante visible en móvil',cover.is_visible() and cover.evaluate('(e)=>getComputedStyle(e).animationName')=='cover-hover')
+    check('Portada flotante visible en escritorio',cover.is_visible() and cover.evaluate('(e)=>getComputedStyle(e).animationName')=='cover-hover')
     check('Portada sin botón de pausa',page.locator('.cover-control').count()==0)
     # La tarjeta flota continuamente: hacer clic sin esperar a que la animación se detenga.
     calls=state['calls'];cover.click(force=True);page.wait_for_selector('#addOrder')

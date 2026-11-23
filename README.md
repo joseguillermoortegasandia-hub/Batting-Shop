@@ -207,7 +207,7 @@ Las facturas se consultan únicamente en el panel, con URLs firmadas temporales.
 
 La migración `20261105031159_stock_limits_home_cover.sql` añade la casilla **Mostrar en la portada de inicio** y el límite público de compra por variante. Aplica después de las migraciones anteriores. El límite de compra es el menor entre stock y máximo del producto. Los costos y datos de proveedor quedan en inventario privado.
 
-La portada muestra un producto marcado a la vez y cambia cada tres segundos, sin botón de pausa ni pausa por cursor/foco. Recorre todos los productos publicados marcados **Mostrar en la portada de inicio**, sin límite de tres y con una sola imagen en el DOM. El enlace abre la ficha. La animación flotante respeta el ajuste de movimiento reducido; la rotación continúa. El logo se muestra hasta que haya un producto marcado para portada. El navegador omite la rotación mientras la pestaña está oculta.
+En pantallas de 1024 px o más, la portada muestra un producto marcado a la vez y cambia cada tres segundos, sin botón de pausa ni pausa por cursor/foco. Recorre todos los productos publicados marcados **Mostrar en la portada de inicio**, sin límite de tres y con una sola imagen en el DOM. El enlace abre la ficha. La animación flotante respeta el ajuste de movimiento reducido; la rotación continúa. El logo se muestra hasta que haya un producto marcado para portada. El navegador omite la rotación mientras la pestaña o la portada están ocultas. Por debajo de 1024 px, el inicio muestra primero la navegación superior y después la búsqueda y los productos, sin bloque de presentación ni franja introductoria.
 
 ### Prueba y despliegue en GitHub Pages
 
