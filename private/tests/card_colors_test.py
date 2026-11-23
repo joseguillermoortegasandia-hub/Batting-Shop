@@ -10,12 +10,15 @@ ROOT=Path(__file__).resolve().parents[2]
 def main():
  bundle=copy.deepcopy(CATALOG)
  bundle['categories'][0]['slug']='batgrips'
+ bundle['categories'][0]['variantMode']='color_size'
+ bundle['categories'][0]['attributes']=[dict(key='edad_nivel',label='Edad / nivel',scope='product',type='select',options=[dict(value='adulto',label='Adulto')])]
  product=bundle['products'][0]
- product['colors']=[dict(id=uuid(300+i),name=name,label=name,hex=hexcode,
+ product['colors']=[dict(id=uuid(300+i),name=name,label=name,hex=hexcode,sortOrder=i,
   images=[dict(storagePath=f'/assets/images/logo.webp?color={name}',alt=name,width=1600,height=1600)],
   variants=[dict(id=uuid(400+i),available=i!=7,normalizedSize='M',sizeLabel='M',maxAvailableQuantity=2 if i!=7 else 0)])
   for i,(name,hexcode) in enumerate([('Azul','#2563eb'),('Rojo','#dc2626'),('Verde','#15803d'),('Blanco','#ffffff'),('Morado','#7e22ce'),('Amarillo','#facc15'),('Naranja','#ea580c'),('Negro','#111111')])]
  product['variants']=[]
+ product['attributes']={'edad_nivel':'adulto'}
  with tempfile.TemporaryDirectory(prefix='card_colors_',dir=ROOT/'artifacts') as directory:
   output=Path(directory)
   class Handler(SimpleHTTPRequestHandler):
@@ -37,13 +40,17 @@ def main():
     for width in [320,390,768,820,1023,1366]:
      context=browser.new_context(viewport={'width':width,'height':900},has_touch=True,reduced_motion='reduce')
      context.route('https://mock.supabase.co/rest/v1/rpc/*',rpc)
-     page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
+     page=context.new_page();errors=[];page.on('pageerror',lambda e:(errors.append(str(e)),print('PAGEERROR',str(e),flush=True)))
      for path,root in [('/','.home-category-section'),('/catalogo.html','#catalogGrid'),('/favoritos.html','#favoritesGrid'),('/producto/?slug=pelota-softball','#relatedGrid')]:
       page.goto(origin+path)
       if path=='/':
        page.wait_for_selector('.product-card')
-       page.evaluate("BattingFavorites.toggle('guante-franklin')")
-      card=page.locator(root+' .product-card').filter(has=page.locator('.product-card-link[href*="guante-franklin"]')).first
+       page.evaluate("BattingFavorites.save([{slug:'guante-franklin',colorId:'00000000-0000-4000-8000-000000000300'},{slug:'guante-franklin',colorId:'00000000-0000-4000-8000-000000000301'}])")
+      cards=page.locator(root+' .product-card').filter(has=page.locator('.product-card-link[href*="guante-franklin"]'))
+      cards.first.wait_for()
+      assert cards.count()==(2 if path=='/favoritos.html' else 8),(width,path,cards.count())
+      assert len(set(cards.evaluate_all('cards=>cards.map(c=>c.dataset.colorId)')))==cards.count()
+      card=cards.first
       card.wait_for()
       assert card.locator('.card-color').count()==8
       assert card.locator('a button').count()==0
@@ -57,8 +64,13 @@ def main():
       orange=card.get_by_role('button',name='Ver color Naranja',exact=True);orange.click()
       assert 'color=Naranja' in card.locator('.card-image img').get_attribute('src')
       assert orange.get_attribute('aria-pressed')=='true' and red.get_attribute('aria-pressed')=='false'
+      assert card.locator('.card-favorite').get_attribute('aria-pressed')=='false'
       assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
-     page.goto(origin+'/producto/?slug=guante-franklin');page.wait_for_selector('#colorOptions button')
+     page.goto(origin+'/producto/?slug=guante-franklin')
+     try:page.wait_for_selector('#colorOptions button')
+     except Exception:
+      print('DEBUG PDP',page.locator('#productRoot').inner_text(),flush=True)
+      raise
      assert page.locator('#sameModelSection').count()==0
      assert page.get_by_text('Otros colores de este modelo',exact=True).count()==0
      assert page.locator('#colorOptions').evaluate("e=>getComputedStyle(e).gridTemplateColumns.split(' ').length")==2
@@ -68,8 +80,28 @@ def main():
      assert 'color=Naranja' in page.locator('#mainProductImage').get_attribute('src')
      assert 'color=Naranja' in page.url
      assert page.locator('#colorOptions .active').inner_text()=='Naranja'
+     assert page.locator('#favoriteProduct').get_attribute('aria-pressed')=='false'
+     page.locator('#favoriteProduct').click()
+     assert page.evaluate('BattingFavorites.count()')==3
+     page.locator('#colorOptions').get_by_role('button',name='Azul disponible',exact=True).click()
+     assert page.locator('#favoriteProduct').get_attribute('aria-pressed')=='true'
+     page.locator('#favoriteProduct').click()
+     assert page.evaluate('BattingFavorites.count()')==2
+     page.goto(origin+'/favoritos.html');page.wait_for_selector('.product-card')
+     assert set(page.locator('#favoritesGrid .card-color-name').all_text_contents())=={'Rojo','Naranja'}
+     page.reload();page.wait_for_selector('.product-card');assert page.locator('#favoritesGrid .product-card').count()==2
+     page.goto(origin+'/catalogo.html?categoria=batgrips&color=Rojo');page.wait_for_selector('.product-card')
+     assert page.locator('#catalogGrid .product-card').count()==1
+     assert page.locator('#catalogGrid .card-color-name').inner_text()=='Rojo'
+     page.goto(origin+'/catalogo.html?categoria=batgrips&talla=M');page.wait_for_selector('.product-card')
+     assert page.locator('#catalogGrid .product-card').count()==7
+     page.evaluate("localStorage.removeItem('batting-shop-favorites-v2');localStorage.setItem('batting-shop-favorites-v1',JSON.stringify(['guante-franklin']))")
+     page.goto(origin+'/favoritos.html');page.wait_for_selector('.product-card')
+     assert page.locator('#favoritesGrid .product-card').count()==1
+     assert page.locator('#favoritesGrid .card-color-name').inner_text()=='Azul'
+     assert page.evaluate("JSON.parse(localStorage.getItem('batting-shop-favorites-v1'))")==['guante-franklin']
      assert not errors,errors
-     print(f'PASS {width}px: Inicio, Catálogo, Favoritos y relacionados; 8 colores, selección, stock y ficha con 2 columnas/autoscroll')
+     print(f'PASS {width}px: Inicio, Catálogo, Favoritos y relacionados; 8 tarjetas por color, filtros correctos, favoritos independientes, migración y autoscroll')
      context.close()
     browser.close()
   finally:server.shutdown();server.server_close();thread.join()

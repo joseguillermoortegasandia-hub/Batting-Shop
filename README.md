@@ -237,3 +237,13 @@ Se revisaron las fotos del catálogo: 28 imágenes con fondos grises se normaliz
 El panel independiente está preparado en el repositorio privado `battingshop-admin`; `node private/scripts/export-admin.mjs` exporta únicamente los archivos necesarios. Su publicación en Cloudflare queda pendiente de conectar la cuenta del propietario. GitHub Pages no está disponible para ese repositorio privado con el plan actual.
 
 En las fichas, elegir un color desplaza la vista hasta su foto en todos los tamaños (sin animación si se solicita movimiento reducido). Los bat grips organizan colores/diseños en dos columnas. Se retiró la sección duplicada Otros colores de este modelo.
+
+## Catálogo por color y carga de imágenes
+
+Inicio, búsqueda, Catálogo, Favoritos y relacionados usan una tarjeta por color. Los filtros de talla, precio y color se aplican a la opción mostrada; cada tarjeta mantiene todos los selectores de su modelo. El inicio conserva el límite configurable de opciones por sección y Ver todos abre la categoría completa. Los favoritos se guardan por modelo/color; los anteriores se migran al color principal disponible y se conserva su copia local original.
+
+Las fotos publicadas tienen copias locales WebP de 320, 480, 960, 1280 y 1600 px, con nombres basados en el contenido. El navegador descarga el tamaño apropiado y difiere las fotos fuera de pantalla. En las 67 fotos publicadas de la revisión, las miniaturas pesan un 66,7 % menos a 320 px y un 29,6 % menos a 480 px. El logo de navegación pasa de 78.794 a 16.870 bytes. Las copias de 1600 px siguen disponibles.
+
+`pnpm run images:refresh` consulta únicamente el catálogo público usando `.env.local`, reutiliza las copias existentes y prepara las fotos nuevas con Python/Pillow. Después se versionan los archivos generados. Los productos nuevos siguen funcionando con sus imágenes de Supabase mientras no tengan copias locales. El build incorpora `public/data/image-variants.json` en la configuración; la tienda no descarga ese JSON aparte.
+
+`pnpm run test:colors` comprueba tarjetas, filtros y favoritos por color; `pnpm run test:media` verifica tamaños reales, descarga adaptativa, círculos, características alineadas y textos completos en móvil y escritorio.

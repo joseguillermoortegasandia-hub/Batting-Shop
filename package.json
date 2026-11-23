@@ -20,7 +20,9 @@
     "configure:pages": "node private/scripts/configure-pages.mjs",
     "check:live": "node --env-file=.env.local private/scripts/check-live.mjs",
     "preview:all": "pwsh -NoProfile -File private/scripts/start-previews.ps1",
-    "test:colors": "python private/tests/card_colors_test.py"
+    "test:colors": "python private/tests/card_colors_test.py",
+    "test:media": "python private/tests/responsive_media_test.py",
+    "images:refresh": "node --env-file-if-exists=.env.local private/scripts/refresh-product-images.mjs"
   },
   "description": "Batting Shop V4 Stage 3 — alias de slugs, CSV dinámico attr: y cierre acumulativo de las tres etapas.",
   "engines": {

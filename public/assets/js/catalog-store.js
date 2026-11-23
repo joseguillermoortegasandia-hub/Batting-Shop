@@ -33,7 +33,14 @@
     if(!configured())return '/assets/images/logo.webp';
     return `${String(cfg.supabaseUrl).replace(/\/+$/,'')}/storage/v1/object/public/product-images/${value.split('/').map(encodeURIComponent).join('/')}`;
   }
-  function normalizeImage(image){return {...image,url:storageUrl(image?.storagePath),thumbnailUrl:storageUrl(image?.thumbnailPath||image?.storagePath)}}
+  function normalizeImage(image){
+    const url=storageUrl(image?.storagePath),sizes=cfg.responsiveImages?.[url];
+    if(!sizes)return {...image,url,thumbnailUrl:storageUrl(image?.thumbnailPath||image?.storagePath)};
+    const entries=Object.entries(sizes);
+    return {...image,url:sizes[1600],detailUrl:sizes[960],thumbnailUrl:sizes[480],smallUrl:sizes[320],srcset:entries.map(([width,path])=>`${path} ${width}w`).join(', '),thumbnailSrcset:entries.filter(([width])=>Number(width)<=480).map(([width,path])=>`${path} ${width}w`).join(', '),width:1600,height:1600};
+  }
+  function storageThumbnailUrl(path){const url=storageUrl(path);return cfg.responsiveImages?.[url]?.[320]||url}
+
   function optionSort(options){return (Array.isArray(options)?options:[]).slice().sort((a,b)=>(Number(a?.sort_order)||0)-(Number(b?.sort_order)||0)||String(a?.label||a?.value||'').localeCompare(String(b?.label||b?.value||''),'es',{numeric:true}))}
   function normalizeCategory(c){return {...c,sortOrder:Number(c?.sortOrder)||0,homeLimit:Number(c?.homeLimit)||8,searchKeywords:Array.isArray(c?.searchKeywords)?c.searchKeywords:[],attributes:(Array.isArray(c?.attributes)?c.attributes:[]).map(a=>({...a,sortOrder:Number(a?.sortOrder)||0,options:optionSort(a?.options)})).sort((a,b)=>a.sortOrder-b.sortOrder||String(a.label).localeCompare(String(b.label),'es'))}}
   function normalizeColor(c){return {...c,label:String(c?.label||c?.displayName||c?.name||''),sortOrder:Number(c?.sortOrder)||0,images:(Array.isArray(c?.images)?c.images:[]).map(normalizeImage),variants:(Array.isArray(c?.variants)?c.variants:[]).map(normalizeVariant)}}
@@ -68,7 +75,7 @@
         .slice(0,limit).map(normalizeProduct);
     }
     const {data,error}=await sb.rpc('get_related_products',{p_product_id:productId,p_limit:Math.max(0,Math.min(Number(limit)||4,12))});if(error)throw error;return (Array.isArray(data)?data:[]).map(normalizeProduct).filter(Boolean)}
-  async function revalidateCart(variantIds){const ids=[...new Set((variantIds||[]).map(String).filter(Boolean))];if(ids.length>50)throw new Error('El pedido admite un máximo de 50 ids.');if(ids.some(id=>!UUID.test(id)))throw new Error('El pedido contiene identificadores inválidos.');if(!ids.length)return[];const sb=getClient();if(!sb)throw new Error('Supabase no está configurado.');const {data,error}=await sb.rpc('get_public_cart_state',{p_variant_ids:ids});if(error)throw error;return (Array.isArray(data)?data:[]).map(row=>({...row,imageUrl:storageUrl(row.imagePath)}))}
+  async function revalidateCart(variantIds){const ids=[...new Set((variantIds||[]).map(String).filter(Boolean))];if(ids.length>50)throw new Error('El pedido admite un máximo de 50 ids.');if(ids.some(id=>!UUID.test(id)))throw new Error('El pedido contiene identificadores inválidos.');if(!ids.length)return[];const sb=getClient();if(!sb)throw new Error('Supabase no está configurado.');const {data,error}=await sb.rpc('get_public_cart_state',{p_variant_ids:ids});if(error)throw error;return (Array.isArray(data)?data:[]).map(row=>({...row,imageUrl:storageThumbnailUrl(row.imagePath)}))}
 
   function categorySlug(product){return product?.category?.slug||''}
   function categoryName(product){return product?.category?.name||''}

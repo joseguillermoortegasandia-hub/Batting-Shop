@@ -43,75 +43,99 @@
     return wrap;
   }
 
-  function syncFavoriteButton(button,slug){
+  function syncFavoriteButton(button,slug,colorId=button?.dataset.favoriteColorId||null){
     if(!button)return;
-    const active=Boolean(window.BattingFavorites?.has?.(slug));
+    const active=Boolean(window.BattingFavorites?.has?.(slug,colorId));
     button.classList.toggle('active',active);
     const icon=button.querySelector('img');if(icon)icon.src=active?'/assets/icons/heart-filled.svg':'/assets/icons/heart.svg';
     button.setAttribute('aria-pressed',String(active));
-    button.setAttribute('aria-label',`${active?'Quitar':'Agregar'} ${slug?'este producto':'producto'} ${active?'de':'a'} favoritos`);
+    button.setAttribute('aria-label',`${active?'Quitar':'Agregar'} ${button.dataset.favoriteLabel||(colorId?'este color':'este producto')} ${active?'de':'a'} favoritos`);
   }
 
-  function favoriteButton(product,{className='favorite-button'}={}){
+  function favoriteButton(product,{className='favorite-button',color=null}={}){
     const button=el('button',{
       class:className,
       type:'button',
-      dataset:{favoriteSlug:product.slug},
+      dataset:{favoriteSlug:product.slug,favoriteColorId:color?.id||'',favoriteLabel:product.name+(color?' · '+window.BattingData.colorDisplay(color):'')},
       'aria-pressed':'false',
       'aria-label':`Agregar ${product.name} a favoritos`
     },el('img',{src:'/assets/icons/heart.svg',alt:''}));
     syncFavoriteButton(button,product.slug);
     button.addEventListener('click',event=>{
       event.preventDefault();event.stopPropagation();
-      const active=window.BattingFavorites?.toggle?.(product.slug);
+      const active=window.BattingFavorites?.toggle?.(product.slug,button.dataset.favoriteColorId||null);
       syncFavoriteButton(button,product.slug);
-      toast(active?'Agregado a favoritos.':'Quitado de favoritos.');
+      toast(active?'Color agregado a favoritos.':'Quitado de favoritos.');
     });
     return button;
   }
 
+  const listingCache=new WeakMap();
+  function colorListings(products){
+    window.BattingFavorites?.resolve?.(products);
+    return products.flatMap(product=>{
+      if(product.listingColor||!product.colors?.length)return [product];
+      if(!listingCache.has(product))listingCache.set(product,product.colors.map(color=>({...product,listingColor:color,cardColors:product.colors,colors:[color],variants:[]})));
+      return listingCache.get(product);
+    });
+  }
+  function setProductImage(photo,image,{detail=false,alt,sizes}={}){
+    const srcset=detail?image.srcset:image.thumbnailSrcset;
+    photo.sizes=sizes||(detail?'(min-width:1024px) 470px, (min-width:760px) 310px, 90vw':'(max-width:599px) calc((100vw - 50px)/2), 280px');
+    if(srcset)photo.srcset=srcset;else photo.removeAttribute('srcset');
+    photo.src=(detail?image.detailUrl||image.url:image.thumbnailUrl||image.url)||'/assets/images/logo.webp';
+    if(alt!==undefined)photo.alt=alt;
+  }
   function productCard(product,{priority=false}={}){
-    const color=window.BattingData.firstAvailableColor(product);
+    const color=product.listingColor||window.BattingData.firstAvailableColor(product);
+    const colors=product.cardColors||product.colors||[];
     const available=window.BattingData.isAvailable(product);
     const image=window.BattingData.firstProductImage(product);
     const href=window.BattingData.productUrl(product.slug,color?.name);
     const card=el('article',{class:'product-card'});
     if(product.featured)card.append(el('span',{class:'tag',text:'DESTACADO'}));
-    card.append(favoriteButton(product,{className:'favorite-button card-favorite'}));
+    card.dataset.productSlug=product.slug;card.dataset.colorId=color?.id||'';
+    const favorite=favoriteButton(product,{className:'favorite-button card-favorite',color});
+    card.append(favorite);
     const link=el('a',{class:'product-card-link',href,'aria-label':`Ver ${product.name}`});
     link.addEventListener('keydown',event=>{
       if(event.key===' '){event.preventDefault();link.click()}
     });
     const photo=el('img',{
-      src:image.thumbnailUrl||image.url,
       width:image.width||1000,height:image.height||1000,
       alt:image.alt||product.name,
       loading:priority?'eager':'lazy',
       fetchpriority:priority?'high':'auto',
       decoding:'async'
     });
+    setProductImage(photo,image,{alt:image.alt||product.name});
     link.append(el('div',{class:'card-image'},photo));
-    const preview=product.colors?.length>1?previewCardColors(card,photo,product,image):null;
+    const preview=colors.length>1?previewCardColors(card,photo,{...product,colors},image):null;
     const body=el('div',{class:'card-body'});
     const titleLink=el('a',{class:'card-title-link',href,text:product.name});
     const price=el('div',{class:'price',text:window.BattingData.listingPrice(product).text});
+    const status=el('span',{class:`status${available?'':' out'}`,text:available?'Disponible':'Agotado'});
+    const colorName=el('div',{class:'card-color-name',text:color?window.BattingData.colorDisplay(color):''});
     body.append(
-      el('span',{class:`status${available?'':' out'}`,text:available?'Disponible':'Agotado'}),
+      status,
       el('h3',{class:'card-title'},titleLink)
     );
     const meta=[product.brand,...window.BattingData.cardAttributes(product).map(item=>item.value)].filter(Boolean).join(' · ');
     if(meta)body.append(el('div',{class:'card-meta',text:meta}));
-    if((product.colors||[]).length){
+    if(color)body.append(colorName);
+    if(colors.length){
       const swatches=el('div',{class:'swatches','aria-label':`Colores de ${product.name}`});
-      product.colors.forEach(item=>{
+      colors.forEach(item=>{
         const name=window.BattingData.colorDisplay(item),inStock=(item.variants||[]).some(variant=>variant.available);
         const button=el('button',{class:'card-color',type:'button',disabled:!inStock,'aria-label':`Ver color ${name}${inStock?'':' (agotado)'}`,'aria-pressed':String(item.id===color?.id),title:name},colorSwatch(item.hex,name));
         button.addEventListener('click',event=>{
           event.preventDefault();event.stopPropagation();
           const selected=item.images?.[0]||image;
           preview?.select(selected);
-          photo.src=selected.thumbnailUrl||selected.url;
-          photo.alt=selected.alt||`${product.name} · ${name}`;
+          setProductImage(photo,selected,{alt:selected.alt||`${product.name} · ${name}`});
+          colorName.textContent=name;card.dataset.colorId=item.id;
+          status.className=`status${inStock?'':' out'}`;status.textContent=inStock?'Disponible':'Agotado';
+          favorite.dataset.favoriteColorId=item.id;favorite.dataset.favoriteLabel=product.name+' · '+name;syncFavoriteButton(favorite,product.slug);
           link.href=titleLink.href=window.BattingData.productUrl(product.slug,item.name);
           price.textContent=window.BattingData.listingPrice({...product,colors:[item],variants:[]}).text;
           [...swatches.children].forEach(node=>node.setAttribute('aria-pressed',String(node===button)));
@@ -127,6 +151,7 @@
   }
 
   function previewCardColors(card,photo,product,cover){
+    let originalImage=cover;
     let originalSrc=cover.thumbnailUrl||cover.url;
     let originalAlt=photo.alt;
     const seen=new Set();
@@ -136,7 +161,7 @@
       const src=image?.thumbnailUrl||image?.url;
       if(!src||seen.has(src))continue;
       seen.add(src);
-      photos.push({src,alt:image.alt||`${product.name} · ${window.BattingData.colorDisplay(color)}`});
+      photos.push({src,image,alt:image.alt||`${product.name} · ${window.BattingData.colorDisplay(color)}`});
     }
     if(photos.length<2)return;
     let coverIndex=photos.findIndex(image=>image.src===originalSrc);
@@ -147,7 +172,7 @@
     function stop(){
       run++;
       clearTimeout(timer);
-      if(photo.getAttribute('src')!==originalSrc)photo.src=originalSrc;
+      if(photo.getAttribute('src')!==originalSrc)setProductImage(photo,originalImage);
       photo.alt=originalAlt;
     }
     card.addEventListener('pointerenter',event=>{
@@ -160,11 +185,13 @@
         const next=photos[nextIndex];
         nextIndex=(nextIndex+1)%photos.length;
         const preview=new Image();
+        preview.sizes=photo.sizes;
+        if(next.image.thumbnailSrcset)preview.srcset=next.image.thumbnailSrcset;
         preview.src=next.src;
         try{
           await preview.decode();
           if(currentRun!==run||!card.isConnected)return;
-          photo.src=next.src;
+          setProductImage(photo,next.image);
           photo.alt=next.alt;
         }catch{
           // A missing preview leaves the current photo visible.
@@ -175,7 +202,7 @@
     });
     card.addEventListener('pointerleave',stop);
     card.addEventListener('pointercancel',stop);
-    return {select(image){stop();originalSrc=image.thumbnailUrl||image.url;originalAlt=image.alt||product.name;coverIndex=photos.findIndex(photo=>photo.src===originalSrc)}};
+    return {select(image){stop();originalImage=image;originalSrc=image.thumbnailUrl||image.url;originalAlt=image.alt||product.name;coverIndex=photos.findIndex(photo=>photo.src===originalSrc)}};
   }
 
   const drawerOpeners=new Map();
@@ -399,7 +426,7 @@
   }
 
   window.BattingUI={
-    qs,qsa,el,loadError,colorSwatch,productCard,favoriteButton,syncFavoriteButton,
+    qs,qsa,el,loadError,colorSwatch,colorListings,setProductImage,productCard,favoriteButton,syncFavoriteButton,
     openDrawer,closeDrawer,wireChrome,toast,withLoader,setWhatsappContext,
     refreshFloatingWhatsapp,renderCategorySheet
   };

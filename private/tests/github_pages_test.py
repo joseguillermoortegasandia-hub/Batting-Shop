@@ -70,11 +70,11 @@ def main():
       assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1'),width
      page.set_viewport_size({'width':1366,'height':900})
      sleeve=page.evaluate("BattingData.storageUrl('ec686421-e5b1-456c-a1eb-2534866f2d44/6f13a647-7575-4fa1-867d-7360a5d5183e.webp')")
-     assert sleeve.startswith(prefix+'/assets/images/white-products/') and sleeve.endswith('.webp'),sleeve
+     assert sleeve.startswith(prefix+'/assets/images/catalog/') and sleeve.endswith('.webp'),sleeve
      assert page.request.get(origin+sleeve).ok
      for code in ['kl2391','kl1766']:
       photo=page.evaluate('(code)=>BattingData.storageUrl("/assets/images/adidas-phnm-"+code+".webp")',code)
-      assert photo.startswith(prefix+'/assets/images/white-products/'),photo
+      assert photo.startswith(prefix+'/assets/images/catalog/'),photo
       assert page.request.get(origin+photo).ok
      print(f'PASS {prefix or "/"}: fotos cuadradas y alineadas en 11 anchos, manga HD disponible')
      cover=page.locator('.cover-float');cover.hover();cover.focus()

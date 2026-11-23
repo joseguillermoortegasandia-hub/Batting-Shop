@@ -159,7 +159,7 @@ def main():
     hover_catalog={**CATALOG,'products':[{**CATALOG['products'][0],'name':long_name,'price':1234567.89,'colors':colors,'variants':[]},*CATALOG['products'][1:]]}
     context=browser.new_context(viewport={'width':1024,'height':900});page=context.new_page()
     context.route('**/rpc/get_public_catalog',lambda route:route.fulfill(json=hover_catalog,headers={'Access-Control-Allow-Origin':'*'}))
-    page.goto(origin+'/catalogo.html');card=page.locator('.product-card').filter(has=page.locator('.product-card-link[href*="guante-franklin"]'))
+    page.goto(origin+'/catalogo.html');card=page.locator('.product-card').filter(has=page.locator('.product-card-link[href*="guante-franklin"]')).first
     card.wait_for();photo=card.locator('.card-image img');cover_src=photo.get_attribute('src')
     check('Catálogo de escritorio usa tres tarjetas con foto enmarcada',page.locator('#catalogGrid').evaluate("grid=>getComputedStyle(grid).gridTemplateColumns.split(' ').length===3") and photo.evaluate("img=>parseFloat(getComputedStyle(img.parentElement).borderRadius)>0"))
     page.screenshot(path=str(OUT/'catalogo-tarjetas-1024.png'),full_page=True)

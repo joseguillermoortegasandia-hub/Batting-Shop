@@ -10,7 +10,7 @@
 <path d="M113 131c39-15 84-15 126 0" stroke-dasharray="8 8"/>
 <path d="M116 123l-8 10 12 4M235 123l8 10-12 4"/>
 </g>
-<g font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#061626">
-<text x="212" y="70">LONGITUD</text><text x="246" y="151">CIRCUNFERENCIA</text>
+<g font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#061626">
+<text x="22" y="70">LONGITUD</text><text x="180" y="248" text-anchor="middle">CIRCUNFERENCIA</text>
 </g>
 </svg>
