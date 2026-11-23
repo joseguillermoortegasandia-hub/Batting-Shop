@@ -5,6 +5,7 @@
   const PRODUCT_PREFIX='batting-shop-public-product-v6:';
   const CACHE_FRESH_MS=60_000,CACHE_STALE_MS=120_000;
   let inFlight=null;
+  const pageCache=new Map(),searchIndexes=new WeakMap();
 
   function validConfigValue(value){const text=String(value||'').trim();return Boolean(text&&!/^__.+__$/.test(text))}
   function configured(){return Boolean(cfg.useSupabase&&validConfigValue(cfg.supabaseUrl)&&validConfigValue(cfg.supabaseAnonKey))}
@@ -21,7 +22,7 @@
   }
   function getClient(){return configured()?{rpc}:null}
   function normalizeText(value){return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
-  function storageUrl(path){const value=String(path||'').trim();if(!value)return '/assets/images/logo.webp';if(value.startsWith('/')&&!value.startsWith('//'))return value;if(value.startsWith('//'))return '/assets/images/logo.webp';if(!configured())return '/assets/images/logo.webp';return `${String(cfg.supabaseUrl).replace(/\/+$/,'')}/storage/v1/object/public/product-images/${value.split('/').map(encodeURIComponent).join('/')}`}
+  function storageUrl(path){const value=String(path||'').trim();if(cfg.imageOverrides?.[value])return cfg.imageOverrides[value];if(!value)return '/assets/images/logo.webp';if(value.startsWith('/')&&!value.startsWith('//'))return (cfg.staticHosting?new URL(cfg.siteUrl).pathname.replace(/\/$/,''):'')+value;if(value.startsWith('//'))return '/assets/images/logo.webp';if(!configured())return '/assets/images/logo.webp';return `${String(cfg.supabaseUrl).replace(/\/+$/,'')}/storage/v1/object/public/product-images/${value.split('/').map(encodeURIComponent).join('/')}`}
   function normalizeImage(image){return {...image,url:storageUrl(image?.storagePath),thumbnailUrl:storageUrl(image?.thumbnailPath||image?.storagePath)}}
   function optionSort(options){return (Array.isArray(options)?options:[]).slice().sort((a,b)=>(Number(a?.sort_order)||0)-(Number(b?.sort_order)||0)||String(a?.label||a?.value||'').localeCompare(String(b?.label||b?.value||''),'es',{numeric:true}))}
   function normalizeCategory(c){return {...c,sortOrder:Number(c?.sortOrder)||0,homeLimit:Number(c?.homeLimit)||8,searchKeywords:Array.isArray(c?.searchKeywords)?c.searchKeywords:[],attributes:(Array.isArray(c?.attributes)?c.attributes:[]).map(a=>({...a,sortOrder:Number(a?.sortOrder)||0,options:optionSort(a?.options)})).sort((a,b)=>a.sortOrder-b.sortOrder||String(a.label).localeCompare(String(b.label),'es'))}}
@@ -30,8 +31,8 @@
   function normalizeProduct(product){if(!product||typeof product!=='object')return null;return {...product,category:product.category?normalizeCategory(product.category):null,attributes:product.attributes&&typeof product.attributes==='object'?product.attributes:{},colors:(Array.isArray(product.colors)?product.colors:[]).map(normalizeColor).sort((a,b)=>a.sortOrder-b.sortOrder||a.label.localeCompare(b.label,'es')),variants:(Array.isArray(product.variants)?product.variants:[]).map(normalizeVariant),images:(Array.isArray(product.images)?product.images:[]).map(normalizeImage)}}
   function normalizeBundle(raw){const categories=(Array.isArray(raw?.categories)?raw.categories:[]).map(normalizeCategory).sort((a,b)=>a.sortOrder-b.sortOrder||a.name.localeCompare(b.name,'es'));const products=(Array.isArray(raw?.products)?raw.products:[]).map(p=>normalizeProduct({...p,category:p.category||categories.find(c=>c.id===p.category_id)})).filter(Boolean);return {categories,products}}
 
-  function cacheGet(key){const result=window.BattingStorage?.getJSON(key,null,{kind:'session'});return result?.value||null}
-  function cacheSet(key,data){window.BattingStorage?.setJSON(key,{savedAt:Date.now(),data},{kind:'session'})}
+  function cacheGet(key){if(pageCache.has(key))return pageCache.get(key);const result=window.BattingStorage?.getJSON(key,null,{kind:'session'});const value=result?.value||null;if(value)pageCache.set(key,value);return value}
+  function cacheSet(key,data){const value={savedAt:Date.now(),data};pageCache.set(key,value);window.BattingStorage?.setJSON(key,value,{kind:'session'})}
   function cacheState(key){const parsed=cacheGet(key);if(!parsed||!Number.isFinite(parsed.savedAt)||!parsed.data)return 'none';const age=Date.now()-parsed.savedAt;return age<=CACHE_FRESH_MS?'fresh':age<=CACHE_STALE_MS?'stale':'expired'}
   function cacheRead(key){const parsed=cacheGet(key);if(!parsed||!Number.isFinite(parsed.savedAt)||!parsed.data)return null;return {age:Date.now()-parsed.savedAt,data:parsed.data}}
 
@@ -70,7 +71,7 @@
   function variantPrice(product,variant){return isKnownPrice(variant?.salePrice)?Number(variant.salePrice):(isKnownPrice(product?.price)?Number(product.price):null)}
   function listingPrice(product){const prices=allVariants(product).filter(v=>v.available).map(v=>variantPrice(product,v)).filter(isKnownPrice).map(Number);if(!prices.length)return {text:formatPrice(product?.price),min:isKnownPrice(product?.price)?Number(product.price):null,varies:false};const unique=[...new Set(prices.map(v=>v.toFixed(2)))],min=Math.min(...prices);return {text:unique.length>1?`Desde ${formatPrice(min)}`:formatPrice(min),min,varies:unique.length>1}}
   function colorDisplay(colorOrName){if(colorOrName&&typeof colorOrName==='object')return String(colorOrName.label||colorOrName.name||'');return String(colorOrName||'').replace(/\//g,' / ')}
-  function productUrl(slug,color){const path=`/producto/${encodeURIComponent(String(slug||''))}/`;const base=location.origin&&location.origin!=='null'?location.origin:(validConfigValue(cfg.siteUrl)?cfg.siteUrl:'https://batting-shop.invalid');const u=new URL(path,base);if(color)u.searchParams.set('color',String(color));return `${u.pathname}${u.search}`}
+  function productUrl(slug,color){const encoded=encodeURIComponent(String(slug||''));const path=cfg.staticHosting?`/producto/?slug=${encoded}`:`/producto/${encoded}/`;const base=location.origin&&location.origin!=='null'?location.origin:(validConfigValue(cfg.siteUrl)?cfg.siteUrl:'https://batting-shop.invalid');const u=new URL(path,base);if(color)u.searchParams.set('color',String(color));return `${u.pathname}${u.search}`}
   function categoryUrl(slug){return `/catalogo.html?categoria=${encodeURIComponent(String(slug||''))}`}
   function flattenAttributeValues(value){if(Array.isArray(value))return value.flatMap(flattenAttributeValues);if(value&&typeof value==='object')return Object.values(value).flatMap(flattenAttributeValues);return value===null||value===undefined?[]:[String(value)]}
   function categoryAttribute(category,key){return category?.attributes?.find(a=>a.key===key)||null}
@@ -87,9 +88,9 @@
   function matchesSearch(product,query){
     const tokens=searchWords(query);
     if(!tokens.length)return true;
-    const words=searchWords(searchText(product));
-    const haystack=words.join(' ');
-    const exact=new Set(words);
+    let index=searchIndexes.get(product);
+    if(!index){const words=searchWords(searchText(product));index={haystack:words.join(' '),exact:new Set(words)};searchIndexes.set(product,index)}
+    const {haystack,exact}=index;
     return tokens.every(token=>haystack.includes(token)||
       (token.length>3&&token.endsWith('s')&&exact.has(token.slice(0,-1)))||
       (token.length>4&&token.endsWith('es')&&exact.has(token.slice(0,-2))));

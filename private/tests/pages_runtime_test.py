@@ -32,7 +32,9 @@ def main():
   def log_message(self,*args):pass
  server=ThreadingHTTPServer(('127.0.0.1',0),RPC);thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
  processes=[];logs=[]
- temporary=tempfile.TemporaryDirectory(prefix="pages_",dir=ROOT/"artifacts")
+ # Windows puede retener brevemente los SQLite de workerd después de taskkill.
+ # La limpieza de esa caché no debe invalidar las comprobaciones funcionales.
+ temporary=tempfile.TemporaryDirectory(prefix="pages_",dir=ROOT/"artifacts",ignore_cleanup_errors=os.name=='nt')
  try:
   directory=temporary.name
   base=Path(directory)
@@ -47,7 +49,7 @@ def main():
    command=['node',str(ROOT/'node_modules/wrangler/bin/wrangler.js'),'pages','dev',str(base/folder),'--ip','127.0.0.1','--port',str(port),'--inspector-port',str(free_port()),'--compatibility-date','2026-11-04','--show-interactive-dev-session=false','--persist-to',str(base/('state-'+str(port)))]
    for key,value in bindings.items():command+=['--binding',key+'='+value]
    process=subprocess.Popen(command,cwd=base,env=env,stdout=log,stderr=subprocess.STDOUT,creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0,start_new_session=os.name!='nt');processes.append(process)
-   deadline=time.monotonic()+45
+   deadline=time.monotonic()+90
    while time.monotonic()<deadline:
     if process.poll() is not None:break
     try:request(origin+'/');return origin

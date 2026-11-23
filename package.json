@@ -6,6 +6,8 @@
   "scripts": {
     "build": "node build.mjs",
     "build:local": "node --env-file=.env.local build.mjs",
+    "build:github": "node private/scripts/build-github.mjs",
+    "test:github": "python private/tests/github_pages_test.py",
     "preview": "python private/scripts/preview-server.py --port 8080 --directory dist",
     "verify": "python private/tests/verify.py",
     "test:browser": "python private/tests/browser_smoke.py",

@@ -70,7 +70,7 @@
     return button;
   }
 
-  function productCard(product){
+  function productCard(product,{priority=false}={}){
     const color=window.BattingData.firstAvailableColor(product);
     const available=window.BattingData.isAvailable(product);
     const image=window.BattingData.firstProductImage(product);
@@ -86,8 +86,8 @@
       src:image.thumbnailUrl||image.url,
       width:image.width||1000,height:image.height||1000,
       alt:image.alt||product.name,
-      loading:document.querySelector('.product-card')?'lazy':'eager',
-      fetchpriority:document.querySelector('.product-card')?'auto':'high',
+      loading:priority?'eager':'lazy',
+      fetchpriority:priority?'high':'auto',
       decoding:'async'
     });
     link.append(el('div',{class:'card-image'},photo));

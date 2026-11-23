@@ -1,4 +1,5 @@
 import {fingerprintAssets} from './private/scripts/fingerprint-assets.mjs';
+import {optimizeStore} from './private/scripts/optimize-store.mjs';
 import {cp,rm,mkdir,readFile,writeFile,readdir,stat} from 'node:fs/promises';
 import {join,extname,basename} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -10,6 +11,7 @@ const siteUrlInput=String(process.env.SITE_URL||'').trim().replace(/\/+$/,'');
 const cfPagesUrl=String(process.env.CF_PAGES_URL||'').trim().replace(/\/+$/,'');
 const cfBranch=String(process.env.CF_PAGES_BRANCH||'').trim();
 const productionBranch=String(process.env.PRODUCTION_BRANCH||'main').trim();
+const isGitHubPages=process.env.BS_HOSTING==='github-pages';
 const isCloudflare=Boolean(cfBranch||cfPagesUrl),isProduction=isCloudflare&&cfBranch===productionBranch;
 const siteUrl=siteUrlInput||(cfPagesUrl||'http://localhost:8080');
 const supabaseUrl=String(process.env.SUPABASE_URL||'').trim().replace(/\/+$/,'');
@@ -29,7 +31,8 @@ async function walk(dir){const out=[];for(const name of await readdir(dir)){cons
 // La publicación remota requiere un origen HTTPS válido, sin rutas ni credenciales.
 try{
  const origin=new URL(siteUrl);
- if(origin.username||origin.password||origin.pathname!=='/'||origin.search||origin.hash)fail('SITE_URL debe contener únicamente el origen, sin ruta, parámetros ni credenciales.');
+ if(origin.username||origin.password||(!isGitHubPages&&origin.pathname!=='/')||origin.search||origin.hash)fail('SITE_URL debe contener únicamente el origen, sin ruta, parámetros ni credenciales (GitHub Pages admite la ruta del repositorio).');
+ if(isGitHubPages&&!/^\/(?:[a-zA-Z0-9_-]+\/?)?$/.test(origin.pathname))fail('Ruta de repositorio inválida para GitHub Pages.');
  if(isCloudflare&&origin.protocol!=='https:')fail('Cloudflare Pages requiere SITE_URL/CF_PAGES_URL con HTTPS.');
  if(!isCloudflare&&origin.protocol!=='https:'&&!(origin.protocol==='http:'&&['localhost','127.0.0.1'].includes(origin.hostname)))fail('Usa HTTPS o localhost para SITE_URL.');
 }catch{fail('SITE_URL/CF_PAGES_URL no es una URL válida.')}
@@ -59,7 +62,7 @@ const chrome=`<header class="site-header"><div class="header-inner"><button clas
 <a class="floating-whatsapp" id="floatingWhatsapp" href="#" target="_blank" rel="noopener" aria-label="Contactar Batting Shop por WhatsApp"><img src="/assets/icons/whatsapp.svg" alt=""></a>
 <div class="global-loader" id="globalLoader" role="status" aria-live="polite" aria-hidden="true" hidden><div class="loader-card"><img class="loader-logo" src="/assets/images/logo.webp" width="150" height="100" alt="Batting Shop"><div id="loaderState"><div class="softball-track"><img src="/assets/icons/softball.svg" alt=""></div><strong>Cargando…</strong></div><div id="loaderError" hidden><strong>No pudimos completar la carga</strong><p>Revisa tu conexión e inténtalo otra vez.</p><a class="btn whatsapp" href="https://wa.me/584120354375">Escríbenos por WhatsApp</a><button class="btn primary" id="loaderRetry" type="button">Reintentar</button></div></div></div>`;
 const footer=`<footer class="site-footer" id="contacto"><div class="footer-inner"><div class="footer-brand"><img src="/assets/images/logo.webp" alt="Batting Shop"><p>Guantines de bateo y accesorios originales. Atención directa, delivery en Maracaibo y envíos a toda Venezuela.</p></div><div class="footer-links"><strong>Contacto</strong><a data-config-href="instagram" target="_blank" rel="noopener"><span data-config-text="instagram"></span></a><a data-config-href="whatsapp" target="_blank" rel="noopener"><span data-config-text="whatsapp"></span></a><span data-config-text="location"></span><span data-config-text="shipping"></span></div><div><strong>Métodos de pago</strong><div class="payments"><span class="pay-pill">Zelle</span><span class="pay-pill">Binance</span><span class="pay-pill">Pago Móvil</span></div></div><div class="footer-links"><strong>Explora</strong><a href="/catalogo.html">Catálogo</a><a href="/favoritos.html">Favoritos</a><a href="/tallas.html">Guía de tallas</a><a href="/#contacto">Contacto</a></div></div></footer>`;
-function scripts(meta){const guides=['/assets/js/product.js','/assets/js/sizeguide.js'].includes(meta.script)?'<script src="/assets/js/size-guide-shared.js" defer></script>':'';return `<script src="/assets/js/config.js" defer></script><script src="/assets/js/site-config.js" defer></script><script src="/assets/js/storage.js" defer></script><script src="/assets/js/catalog-store.js" defer></script><script src="/assets/js/favorites.js" defer></script><script src="/assets/js/ui.js" defer></script><script src="/assets/js/cart.js" defer></script>${guides}${meta.script?`<script src="${meta.script}" defer></script>`:''}<script src="/assets/js/bootstrap.js" defer></script>`}
+function scripts(meta){const guides=['/assets/js/product.js','/assets/js/sizeguide.js'].includes(meta.script)?'<script src="/assets/js/size-guide-shared.js" defer></script>':'';return `<script src="/assets/js/config.js" defer></script><script src="/assets/js/storefront.js" defer></script>${guides}${meta.script?`<script src="${meta.script}" defer></script>`:''}`}
 
 await rm(output,{recursive:true,force:true});await mkdir(output,{recursive:true});await cp(source,output,{recursive:true});
 for(const [rel,meta] of Object.entries(pages)){const file=join(output,rel);let html=await readFile(file,'utf8');html=html.replace('<!--BS_HEAD-->',sharedHead(meta)).replace('<!--BS_CHROME-->',chrome).replace('<!--BS_FOOTER-->',footer).replace('<!--BS_SCRIPTS-->',scripts(meta));await writeFile(file,html)}
@@ -79,4 +82,28 @@ if(deployed.some(file=>/\/(?:admin|panel)\//i.test(file.slice(output.length).rep
 for(const file of deployed){if(!textExts.has(extname(file).toLowerCase())&&basename(file)!=='_headers'&&basename(file)!=='_worker.js')continue;const content=await readFile(file,'utf8');if(/(?:\badmin\b|supabase-js|createClient|admin_users)/i.test(content))fail('Referencia privada en la salida pública: '+file);if(/__(SITE_URL|SUPABASE_URL|SUPABASE_ANON_KEY)__/.test(content))fail(`placeholder sin reemplazar en ${file}`);if(/https:\/\/battingshop\.ve(?:\/|\b)/i.test(content))fail(`dominio hardcodeado en ${file}`);if(/\sstyle\s*=\s*["']/i.test(content))fail(`CSP estricta: todavía existe style= inline en ${file}`);if(/cdn\.jsdelivr\.net/i.test(content))fail(`dependencia CDN detectada en ${file}`)}
 console.log(`Batting Shop V4 Final listo en dist/ para ${siteUrl}`);console.log(`Rama: ${cfBranch||'local'} · producción: ${isProduction?'sí':'no'} · noindex: ${noindex?'sí':'no'}`);console.log('La salida pública contiene únicamente la tienda.');
 
-await fingerprintAssets(output);
+if(isGitHubPages){
+  // Pages sirve archivos: no ejecuta el Worker ni aplica _headers/_routes.json.
+  for(const name of ['_worker.js','_headers','_routes.json'])await rm(join(output,name),{force:true});
+  await writeFile(join(output,'.nojekyll'),'');
+  const basePath=new URL(siteUrl).pathname.replace(/\/$/,'');
+  const rootPaths=/(["'`])\/(assets\/|data\/|producto\/|catalogo\.html|favoritos\.html|tallas\.html|manifest\.webmanifest)/g;
+  for(const file of await walk(output)){
+    if(!textExts.has(extname(file).toLowerCase()))continue;
+    let content=await readFile(file,'utf8');
+    if(file===join(output,'assets/js/config.js'))content=content.replace('staticHosting: false','staticHosting: true');
+    if(file.endsWith('.html')){
+      const metaCsp=csp.replace(/frame-ancestors 'none'; /,'');
+      content=content.replace('<meta charset="utf-8">',`<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${escapeHtml(metaCsp)}">`);
+      content=content.replace(/href="\/(#?[^"]*)"/g,(match,tail)=>tail===''||tail.startsWith('#')?`href="${basePath}/${tail}"`:match);
+    }
+    content=content.replace(rootPaths,(_,quote,path)=>`${quote}${basePath}/${path}`);
+    if(file.endsWith('.webmanifest'))content=content.replace('"start_url": "/"',`"start_url": "${basePath}/"`);
+    // El sitemap debe abrir fichas existentes en un host sin reescrituras.
+    if(file.endsWith('sitemap.xml'))content=content.replace(/\/producto\/([a-z0-9-]+)\//g,'/producto/?slug=$1');
+    await writeFile(file,content);
+  }
+  console.log(`Salida estática para GitHub Pages: ${siteUrl}/ (fichas por ?slug=).`);
+}
+await optimizeStore(output);
+await fingerprintAssets(output,isGitHubPages?new URL(siteUrl).pathname.replace(/\/$/,''):'');

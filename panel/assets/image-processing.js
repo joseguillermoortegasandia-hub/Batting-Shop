@@ -7,7 +7,8 @@
     try{
       if(image.width<800||image.height<800)throw new Error('La foto debe medir al menos 800 × 800 px.');
       if(image.width*image.height>40_000_000)throw new Error('La foto supera el máximo de 40 megapíxeles.');
-      const side=Math.min(1600,Math.max(image.width,image.height));
+      // Mismo lienzo para todas las fotos: la proporción del producto se conserva.
+      const side=1600;
       const canvas=document.createElement('canvas');canvas.width=canvas.height=side;
       const context=canvas.getContext('2d');context.fillStyle='#fff';context.fillRect(0,0,side,side);
       const ratio=Math.min(side/image.width,side/image.height);

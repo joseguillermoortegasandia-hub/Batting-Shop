@@ -168,7 +168,7 @@ def main():
     check('Vista previa pasa por los colores con una foto por variante','foto=1' in photo.get_attribute('src') and 'color=Azul' in cover_src)
     page.mouse.move(1,1)
     check('Al salir de la tarjeta se recupera la foto original',photo.get_attribute('src')==cover_src)
-    page.emulate_media(reduced_motion='reduce');card.hover();page.wait_for_timeout(900)
+    page.emulate_media(reduced_motion='reduce');card.hover(force=True);page.wait_for_timeout(900)
     check('Vista previa respeta movimiento reducido',photo.get_attribute('src')==cover_src)
     page.set_viewport_size({'width':320,'height':900});title=card.locator('.card-title');price=card.locator('.price')
     check('Nombre largo completo en móvil',title.inner_text()==long_name and title.evaluate('e=>e.scrollHeight<=e.clientHeight+1'))
@@ -201,6 +201,17 @@ def main():
     page.locator('[data-close-cart]').click()
     page.locator('#colorOptions').get_by_role('button',name='Negro agotado',exact=True).click();check('Color agotado permite ver fotos sin comprar','color=Negro' in page.locator('#mainProductImage').get_attribute('src') and page.locator('#addOrder').is_disabled())
     page.screenshot(path=str(OUT/'ficha-colores-390.png'),full_page=True);context.close();PRODUCTS[0]=original_product
+    # Una marca con guía de guantines también puede vender medias con talla.
+    socks={**original_product,'slug':'medias-nike','name':'Medias Nike','brand':'Nike',
+      'category':{'id':uuid(4),'slug':'medias','name':'Medias deportivas'},
+      'variants':[{'id':uuid(90),'available':True,'sizeLabel':'M','normalizedSize':'M'}]}
+    context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc)
+    context.route('**/rpc/get_public_product',lambda route:route.fulfill(json=socks,headers={'Access-Control-Allow-Origin':'*'}))
+    page=context.new_page();guide_requests=[]
+    page.on('request',lambda request:guide_requests.append(request.url) if request.url.endswith('/data/size-guides.json') else None)
+    page.goto(origin+'/producto/medias-nike/');page.wait_for_selector('#relatedGrid .product-card')
+    check('Medias Nike muestran talla M sin cargar la guía de guantines',page.locator('#sizeOptions').get_by_role('button',name='M disponible',exact=True).is_visible() and page.locator('#productSizeGuide').is_hidden() and not guide_requests)
+    context.close()
     # Un descenso de stock reduce el pedido y conserva la validación.
     state['stock']=3
     context=browser.new_context(viewport={'width':390,'height':900});context.route('https://mock.supabase.co/rest/v1/rpc/*',route_rpc);page=context.new_page();page.goto(origin+'/producto/guante-franklin/')
@@ -218,9 +229,9 @@ def main():
     first=cover.get_attribute('href');page.wait_for_function("(first)=>document.querySelector('.cover-float').getAttribute('href')!==first",arg=first,timeout=5000)
     check('Portada rota a otro producto cada 3 segundos',cover.get_attribute('href')=='/producto/pelota-softball/')
     check('Portada flotante visible en móvil',cover.is_visible() and cover.evaluate('(e)=>getComputedStyle(e).animationName')=='cover-hover')
-    page.locator('.cover-control').click()
-    check('Portada tiene control de pausa',page.locator('.cover-control').inner_text()=='Reproducir')
-    calls=state['calls'];cover.click();page.wait_for_selector('#addOrder')
+    check('Portada sin botón de pausa',page.locator('.cover-control').count()==0)
+    # La tarjeta flota continuamente: hacer clic sin esperar a que la animación se detenga.
+    calls=state['calls'];cover.click(force=True);page.wait_for_selector('#addOrder')
     check('Portada abre el producto mostrado','/producto/pelota-softball/' in page.url)
     check('Ficha reutiliza catálogo sin llamadas RPC adicionales',state['calls']==calls)
     context.close()
@@ -277,6 +288,8 @@ def main():
     converted=page.evaluate("""async()=>{const canvas=document.createElement('canvas');canvas.width=2400;canvas.height=1800;const ctx=canvas.getContext('2d');ctx.fillStyle='red';ctx.fillRect(0,0,2400,1800);const source=await new Promise(r=>canvas.toBlob(r,'image/png'));const result=await BattingImages.prepare(new File([source],'test.png',{type:'image/png'}));const thumb=await createImageBitmap(result.thumbnail);return {width:result.width,height:result.height,type:result.full.type,jpgType:result.jpg.type,jpgSize:result.jpg.size,thumb:thumb.width}}""")
     check('Foto WebP 1600px',converted['width']==1600 and converted['height']==1600 and converted['type']=='image/webp')
     check('Miniatura 480px y JPG <=300KB',converted['thumb']==480 and converted['jpgType']=='image/jpeg' and converted['jpgSize']<=300*1024)
+    for w,h in [(800,800),(1000,1400)]:
+     normalized=page.evaluate("""async([w,h])=>{const c=document.createElement('canvas');c.width=w;c.height=h;const b=await new Promise(r=>c.toBlob(r,'image/png'));const result=await BattingImages.prepare(new File([b],'upload.png',{type:'image/png'}));const full=await createImageBitmap(result.full);return [full.width,full.height]}""",[w,h]);check(f'Normaliza carga {w}x{h} a 1600x1600',normalized==[1600,1600])
     rejected=page.evaluate("""async()=>{const c=document.createElement('canvas');c.width=c.height=400;const b=await new Promise(r=>c.toBlob(r,'image/png'));try{await BattingImages.prepare(new File([b],'small.png',{type:'image/png'}));return false}catch{return true}}""");check('Rechaza foto menor a 800px',rejected)
     context.close();browser.close()
   finally:server.shutdown();server.server_close();thread.join();panel_server.shutdown();panel_server.server_close();panel_thread.join()
