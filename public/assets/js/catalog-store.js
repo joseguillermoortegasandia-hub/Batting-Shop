@@ -22,7 +22,17 @@
   }
   function getClient(){return configured()?{rpc}:null}
   function normalizeText(value){return String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()}
-  function storageUrl(path){const value=String(path||'').trim();if(cfg.imageOverrides?.[value])return cfg.imageOverrides[value];if(!value)return '/assets/images/logo.webp';if(value.startsWith('/')&&!value.startsWith('//'))return (cfg.staticHosting?new URL(cfg.siteUrl).pathname.replace(/\/$/,''):'')+value;if(value.startsWith('//'))return '/assets/images/logo.webp';if(!configured())return '/assets/images/logo.webp';return `${String(cfg.supabaseUrl).replace(/\/+$/,'')}/storage/v1/object/public/product-images/${value.split('/').map(encodeURIComponent).join('/')}`}
+  function storageUrl(path){
+    const value=String(path||'').trim();
+    if(!value||value.startsWith('//'))return '/assets/images/logo.webp';
+    const prefix=cfg.staticHosting?new URL(cfg.siteUrl).pathname.replace(/\/$/,''):'';
+    const localPath=value.startsWith('/')?(prefix&&value.startsWith(prefix+'/')?value:prefix+value):value;
+    const override=cfg.imageOverrides?.[value]||cfg.imageOverrides?.[localPath];
+    if(override)return override;
+    if(value.startsWith('/'))return localPath;
+    if(!configured())return '/assets/images/logo.webp';
+    return `${String(cfg.supabaseUrl).replace(/\/+$/,'')}/storage/v1/object/public/product-images/${value.split('/').map(encodeURIComponent).join('/')}`;
+  }
   function normalizeImage(image){return {...image,url:storageUrl(image?.storagePath),thumbnailUrl:storageUrl(image?.thumbnailPath||image?.storagePath)}}
   function optionSort(options){return (Array.isArray(options)?options:[]).slice().sort((a,b)=>(Number(a?.sort_order)||0)-(Number(b?.sort_order)||0)||String(a?.label||a?.value||'').localeCompare(String(b?.label||b?.value||''),'es',{numeric:true}))}
   function normalizeCategory(c){return {...c,sortOrder:Number(c?.sortOrder)||0,homeLimit:Number(c?.homeLimit)||8,searchKeywords:Array.isArray(c?.searchKeywords)?c.searchKeywords:[],attributes:(Array.isArray(c?.attributes)?c.attributes:[]).map(a=>({...a,sortOrder:Number(a?.sortOrder)||0,options:optionSort(a?.options)})).sort((a,b)=>a.sortOrder-b.sortOrder||String(a.label).localeCompare(String(b.label),'es'))}}

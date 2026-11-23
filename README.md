@@ -229,3 +229,11 @@ La ficha presenta descripción abierta y la tabla de la marca cuando existen tal
 La compilación agrupa el JavaScript compartido y comprime JS/CSS. Las tarjetas usan miniaturas y carga diferida; la búsqueda espera 120 ms entre cambios y conserva el índice en memoria. Las categorías reservan el mismo espacio cuadrado para la foto y dos líneas para el título.
 
 La foto nítida de la manga Nike está en `public/assets/images/nike-pro-youth-sleeve.webp` (1600 px) y su miniatura de 480 px. Fuente: [Nike Pro Dri-FIT juvenil 4.0](https://www.nike.com/t/pro-dri-fit-big-kids-football-sleeve-4-NZn8j9). `imageOverrides` sustituye únicamente la ruta antigua borrosa; las nuevas fotos del panel conservan sus propias rutas.
+
+En móvil y tablet, el logo queda centrado respecto a la pantalla. Las tarjetas de Inicio, Catálogo, Favoritos y relacionados permiten tocar cada color disponible para cambiar la foto sin entrar a la ficha. El enlace de foto/título abre el color elegido; los colores agotados están deshabilitados. La fila de colores se puede desplazar y no limita la cantidad a seis.
+
+Se revisaron las fotos del catálogo: 28 imágenes con fondos grises se normalizaron sobre blanco (incluidos los dos bolsos PHNM), con copias de 1600 px y miniaturas de 480 px. `imageOverrides` aplica únicamente a las rutas anteriores y conserva los originales. El resto de fotos ya tenía fondo blanco.
+
+El panel independiente está preparado en el repositorio privado `battingshop-admin`; `node private/scripts/export-admin.mjs` exporta únicamente los archivos necesarios. Su publicación en Cloudflare queda pendiente de conectar la cuenta del propietario. GitHub Pages no está disponible para ese repositorio privado con el plan actual.
+
+En las fichas, elegir un color desplaza la vista hasta su foto en todos los tamaños (sin animación si se solicita movimiento reducido). Los bat grips organizan colores/diseños en dos columnas. Se retiró la sección duplicada Otros colores de este modelo.

@@ -91,27 +91,44 @@
       decoding:'async'
     });
     link.append(el('div',{class:'card-image'},photo));
-    if(product.colors?.length>1)previewCardColors(card,photo,product,image);
+    const preview=product.colors?.length>1?previewCardColors(card,photo,product,image):null;
     const body=el('div',{class:'card-body'});
+    const titleLink=el('a',{class:'card-title-link',href,text:product.name});
+    const price=el('div',{class:'price',text:window.BattingData.listingPrice(product).text});
     body.append(
       el('span',{class:`status${available?'':' out'}`,text:available?'Disponible':'Agotado'}),
-      el('h3',{class:'card-title',text:product.name})
+      el('h3',{class:'card-title'},titleLink)
     );
     const meta=[product.brand,...window.BattingData.cardAttributes(product).map(item=>item.value)].filter(Boolean).join(' · ');
     if(meta)body.append(el('div',{class:'card-meta',text:meta}));
     if((product.colors||[]).length){
-      const swatches=el('div',{class:'swatches','aria-label':'Colores o diseños disponibles'});
-      product.colors.slice(0,6).forEach(item=>swatches.append(colorSwatch(item.hex,window.BattingData.colorDisplay(item))));
+      const swatches=el('div',{class:'swatches','aria-label':`Colores de ${product.name}`});
+      product.colors.forEach(item=>{
+        const name=window.BattingData.colorDisplay(item),inStock=(item.variants||[]).some(variant=>variant.available);
+        const button=el('button',{class:'card-color',type:'button',disabled:!inStock,'aria-label':`Ver color ${name}${inStock?'':' (agotado)'}`,'aria-pressed':String(item.id===color?.id),title:name},colorSwatch(item.hex,name));
+        button.addEventListener('click',event=>{
+          event.preventDefault();event.stopPropagation();
+          const selected=item.images?.[0]||image;
+          preview?.select(selected);
+          photo.src=selected.thumbnailUrl||selected.url;
+          photo.alt=selected.alt||`${product.name} · ${name}`;
+          link.href=titleLink.href=window.BattingData.productUrl(product.slug,item.name);
+          price.textContent=window.BattingData.listingPrice({...product,colors:[item],variants:[]}).text;
+          [...swatches.children].forEach(node=>node.setAttribute('aria-pressed',String(node===button)));
+        });
+        swatches.append(button);
+      });
       body.append(swatches);
     }
-    body.append(el('div',{class:'price',text:window.BattingData.listingPrice(product).text}));
-    link.append(body);card.append(link);
+    body.append(price);
+    body.addEventListener('click',event=>{if(!event.target.closest('button,a'))link.click()});
+    card.append(link,body);
     return card;
   }
 
   function previewCardColors(card,photo,product,cover){
-    const originalSrc=cover.thumbnailUrl||cover.url;
-    const originalAlt=photo.alt;
+    let originalSrc=cover.thumbnailUrl||cover.url;
+    let originalAlt=photo.alt;
     const seen=new Set();
     const photos=[];
     for(const color of product.colors){
@@ -122,7 +139,7 @@
       photos.push({src,alt:image.alt||`${product.name} · ${window.BattingData.colorDisplay(color)}`});
     }
     if(photos.length<2)return;
-    const coverIndex=photos.findIndex(image=>image.src===originalSrc);
+    let coverIndex=photos.findIndex(image=>image.src===originalSrc);
 
     const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
     let timer;
@@ -158,6 +175,7 @@
     });
     card.addEventListener('pointerleave',stop);
     card.addEventListener('pointercancel',stop);
+    return {select(image){stop();originalSrc=image.thumbnailUrl||image.url;originalAlt=image.alt||product.name;coverIndex=photos.findIndex(photo=>photo.src===originalSrc)}};
   }
 
   const drawerOpeners=new Map();

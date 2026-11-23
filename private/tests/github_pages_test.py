@@ -52,12 +52,14 @@ def main():
      page.goto(origin+prefix+'/');page.wait_for_selector('.cover-float')
      assert page.locator('.cover-control').count()==0
      assert page.locator('#heroVisual img').count()==1
-     for width in [320,375,390,768,820,1024,1366,1920,2560]:
+     for width in [320,375,390,768,820,980,1023,1024,1366,1920,2560]:
       page.set_viewport_size({'width':width,'height':900})
       assert page.locator('.desktop-hero').is_visible()==(width>=1024),width
       assert not page.locator('.mobile-intro').is_visible(),width
       assert page.locator('.site-header').is_visible(),width
       if width<1024:
+       logo=page.locator('.site-header .brand-logo').bounding_box()
+       assert abs(logo['x']+logo['width']/2-width/2)<1,(width,logo)
        header=page.locator('.site-header').bounding_box();search=page.locator('.search-wrap').bounding_box()
        assert search['y']>=header['y']+header['height']-1 and search['y']<header['y']+header['height']+40,(width,header,search)
       cards=page.locator('.visual-category').evaluate_all("""nodes=>nodes.map(n=>{const r=n.getBoundingClientRect(),i=n.querySelector('img').getBoundingClientRect(),s=n.querySelector('small').getBoundingClientRect();return {top:r.top,imgTop:i.top,imgWidth:i.width,imgHeight:i.height,countTop:s.top}})""")
@@ -68,13 +70,13 @@ def main():
       assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1'),width
      page.set_viewport_size({'width':1366,'height':900})
      sleeve=page.evaluate("BattingData.storageUrl('ec686421-e5b1-456c-a1eb-2534866f2d44/6f13a647-7575-4fa1-867d-7360a5d5183e.webp')")
-     assert sleeve==prefix+'/assets/images/nike-pro-youth-sleeve.webp',sleeve
+     assert sleeve.startswith(prefix+'/assets/images/white-products/') and sleeve.endswith('.webp'),sleeve
      assert page.request.get(origin+sleeve).ok
      for code in ['kl2391','kl1766']:
       photo=page.evaluate('(code)=>BattingData.storageUrl("/assets/images/adidas-phnm-"+code+".webp")',code)
-      assert photo==prefix+'/assets/images/adidas-phnm-'+code+'.webp',photo
+      assert photo.startswith(prefix+'/assets/images/white-products/'),photo
       assert page.request.get(origin+photo).ok
-     print(f'PASS {prefix or "/"}: fotos cuadradas y alineadas en 9 anchos, manga HD disponible')
+     print(f'PASS {prefix or "/"}: fotos cuadradas y alineadas en 11 anchos, manga HD disponible')
      cover=page.locator('.cover-float');cover.hover();cover.focus()
      for i in range(1,121):
       page.clock.fast_forward(3000)
@@ -85,7 +87,11 @@ def main():
      page.clock.resume()
      cover.click();page.wait_for_selector('#productName')
      assert page.locator('#productName').inner_text()=='Producto 0'
-     page.reload();page.wait_for_selector('#addOrder')
+     page.reload()
+     try:page.wait_for_selector('#addOrder')
+     except Exception:
+      print('DEBUG',errors,page.locator('#productRoot').inner_text(),flush=True)
+      raise
      assert '?slug=producto-0' in page.url
      assert page.locator('link[rel="stylesheet"]').get_attribute('href').startswith(prefix+'/assets/')
      assert '?v=' in page.locator('link[rel="stylesheet"]').get_attribute('href')
