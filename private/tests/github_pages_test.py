@@ -28,6 +28,10 @@ def main():
    data=bundle if name=='get_public_catalog' else next((p for p in bundle['products'] if p['slug']==args.get('p_slug')),None)
    route.fulfill(status=200,content_type='application/json',body=json.dumps(data))
   try:
+   checkdir=(base/'https-check').relative_to(ROOT).as_posix()
+   subprocess.run(['node','private/scripts/build-github.mjs'],cwd=ROOT,env={**os.environ,'SITE_URL':'http://example.github.io/Batting-Shop','SUPABASE_URL':'https://mock.supabase.co','SUPABASE_ANON_KEY':'mock-public-key','SKIP_SITEMAP_API':'1','BS_OUTPUT_DIR':checkdir},check=True,capture_output=True)
+   assert 'https://example.github.io/Batting-Shop/' in (ROOT/checkdir/'index.html').read_text(encoding='utf-8')
+   print('PASS URL github.io normalizada a HTTPS')
    with sync_playwright() as pw:
     executable=os.environ.get('PLAYWRIGHT_EXECUTABLE_PATH')
     browser=pw.chromium.launch(executable_path=executable) if executable else pw.chromium.launch(channel='chrome')
