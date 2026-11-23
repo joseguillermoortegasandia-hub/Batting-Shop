@@ -13,8 +13,8 @@ const panelUrl=String(process.env.PANEL_URL||process.env.CF_PAGES_URL||'http://l
 const storeUrl=String(process.env.STOREFRONT_URL||'http://localhost:8080').trim().replace(/\/+$/,'');
 const supabaseUrl=String(process.env.SUPABASE_URL||'').trim().replace(/\/+$/,'');
 const key=String(process.env.SUPABASE_ANON_KEY||'').trim();
-function validOrigin(value){const u=new URL(value);if(u.pathname!=='/'||u.search||u.hash||u.username||u.password)throw new Error('Usa únicamente el origen, sin rutas ni credenciales.');if(u.protocol!=='https:'&&!(u.protocol==='http:'&&['localhost','127.0.0.1'].includes(u.hostname)))throw new Error('El panel requiere HTTPS o localhost.');return u}
-const panel=validOrigin(panelUrl),store=validOrigin(storeUrl);
+function validOrigin(value,allowPath=false){const u=new URL(value);if((!allowPath&&u.pathname!=='/')||(allowPath&&!/^\/(?:[a-zA-Z0-9_-]+\/?)?$/.test(u.pathname))||u.search||u.hash||u.username||u.password)throw new Error('Usa únicamente el origen, sin rutas ni credenciales.');if(u.protocol!=='https:'&&!(u.protocol==='http:'&&['localhost','127.0.0.1'].includes(u.hostname)))throw new Error('El panel requiere HTTPS o localhost.');return u}
+const panel=validOrigin(panelUrl),store=validOrigin(storeUrl,true);
 if(panel.origin===store.origin)throw new Error('El panel y la tienda deben tener orígenes distintos.');
 if((process.env.CF_PAGES_URL||process.env.CF_PAGES_BRANCH)&&(panel.protocol!=='https:'||store.protocol!=='https:'))throw new Error('En Pages los dos orígenes deben usar HTTPS.');
 if(panel.protocol==='https:'&&(!process.env.STOREFRONT_URL||store.protocol!=='https:'))throw new Error('Configura STOREFRONT_URL con el origen HTTPS de la tienda.');
